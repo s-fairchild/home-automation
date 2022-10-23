@@ -7,42 +7,58 @@ ignition:
 storage:
   disks:
     - device: /dev/disk/by-id/wwn-0x5000c500c8e4bd14
-      wipe_table: true
+      wipe_table: false
       partitions:
         - label: raid5.1
           number: 1
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
     - device: /dev/disk/by-id/wwn-0x5000c500c937816a
-      wipe_table: true
+      wipe_table: false
       partitions:
         - label: raid5.2
           number: 1
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
     - device: /dev/disk/by-id/wwn-0x5000c500c8e196b3
-      wipe_table: true
+      wipe_table: false
       partitions:
         - label: raid5.3
           number: 1
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
     - device: /dev/disk/by-id/wwn-0x5000c500c8e37087
-      wipe_table: true
+      wipe_table: false
       partitions:
         - label: raid5.4
           number: 1
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
     - device: /dev/disk/by-id/wwn-0x5000c500c8a40802
-      wipe_table: true
+      wipe_table: false
       partitions:
         - label: raid5.5
           number: 1
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+  filesystems:
+    - path: /var/data
+      device: /dev/mapper/data
+      format: xfs
+      label: data
+      with_mount_unit: true
+      wipe_filesystem: false
+    - device: /dev/disk/by-partlabel/root
+      format: btrfs
+      label: root
+      wipe_filesystem: false

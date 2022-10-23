@@ -1,3 +1,5 @@
 .vscode/
 container_secrets/
+luks_keys/
+isos/
 *.ign

@@ -46,3 +46,25 @@ storage:
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+  filesystems:
+    - path: /var/data
+      device: /dev/mapper/data
+      format: btrfs
+      label: data
+      # https://raid.wiki.kernel.org/index.php/RAID_setup#XFS
+      # options:
+        # - su=128k
+        # - sw=3
+      with_mount_unit: true
+systemd:
+  units:
+    - name: serial-getty@ttyS0.service
+      dropins:
+      - name: autologin-core.conf
+        contents: |
+          [Service]
+          # Override Execstart in main unit
+          ExecStart=
+          # Add new Execstart with `-` prefix to ignore failure
+          ExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM
+          TTYVTDisallocate=no

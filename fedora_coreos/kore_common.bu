@@ -1,22 +1,28 @@
 variant: fcos
 version: 1.4.0
-boot_device:
-  luks:
-    tpm2: true
 passwd:
   # TODO setup users for sftp and nfs
   groups:
     - name: backups
-    # - name: video
+    - name: cctv
+    - name: movies
   users:
     - name: core
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILKn4SiC50J4Yre5jcFdLvXH1VaNoW1ko5ng8nT/ZxAA steven@rh-thinkpad-p1
     - name: deja
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
       groups:
         - backups
+    - name: steven
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
+      groups:
+        - backups
+        - cctv
+        - movies
     - name: motion
       home_dir: /var/data/motion
       no_create_home: true
@@ -28,16 +34,11 @@ passwd:
     - name: pihole
 storage:
   luks:
-  - name: root
-    label: luks-root
-    device: /dev/disk/by-partlabel/root
-    clevis:
-      tpm2: true
-    wipe_volume: true
   - name: data
     device: /dev/md/data
-    clevis:
-      tpm2: true
+    wipe_volume: true
+    key_file:
+      local: luks_keys/data.key
   raid:
     - name: data
       level: raid5
@@ -53,58 +54,42 @@ storage:
       options:
         - --chunk
         - 128K
-  filesystems:
-    - path: /var/data
-      device: /dev/mapper/data
-      format: xfs
-      label: data
-      # https://raid.wiki.kernel.org/index.php/RAID_setup#XFS
-      # options:
-        # - su=128k
-        # - sw=3
-      with_mount_unit: true
-    - device: /dev/mapper/root
-      format: btrfs
-      wipe_filesystem: true
-      label: root
-
   directories:
     - path: /var/data/motion
       user: 
         name: motion
       group: 
-        name: motion
+        name: cctv
     - path: /var/data/motion/frontdoor
       user: 
         name: motion
       group: 
-        name: motion
+        name: cctv
     - path: /var/data/motion/dustins_room
       user: 
         name: motion
       group: 
-        name: motion
+        name: cctv
     - path: /var/data/motion/driveway
       user: 
         name: motion
       group: 
-        name: motion
+        name: cctv
     - path: /var/data/emby
       user:
         name: emby
       group:
-        name: emby
-    - path: /usr/local/etc/unbound
+        name: movies
     - path: /var/data/emby/stuff
       user:
         name: emby
       group:
-        name: emby
+        name: movies
     - path: /var/data/deja/r10
       user:
         name: deja
       group:
-        name: deja
+        name: backups
     - path: /var/container_secrets
       user:
         name: root
@@ -158,7 +143,6 @@ storage:
       overwrite: true
       contents:
         local: container_secrets/motion_camera3
-    
     # Used by podman-secrets.service
     - path: /usr/local/bin/create_podman_secrets.sh
       overwrite: true
@@ -172,6 +156,13 @@ storage:
       mode: 0700
       contents:
         local: bin/motion_config_editor.sh
+    
+    # Used by v4l2rtspserver.servive
+    - path: /usr/local/bin/start_v4l2rtspserver.sh
+      overwrite: true
+      mode: 0700
+      contents:
+        local: bin/start_v4l2rtspserver.sh
 
     # Ensure ELP usb camera is added for v4l2rtspserver
     - path: /etc/udev/rules.d/99-usb-cam.rules
@@ -217,6 +208,71 @@ storage:
         local: unbound/unbound.conf
       mode: 0644
 
+    - path: /usr/local/bin/graylog.yaml
+      overwrite: true
+      contents:
+        inline: |
+          version: '2'
+          services:
+            # MongoDB: https://hub.docker.com/_/mongo/
+            mongodb:
+              image: mongo:4.2
+              volumes:
+                - /var/data/mongo:/data/db
+            # Elasticsearch: https://www.elastic.co/guide/en/elasticsearch/reference/7.10/docker.html
+            elasticsearch:
+              image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+              volumes:
+                - /var/data/elasticsearch:/usr/share/elasticsearch/data
+              environment:
+                - http.host=0.0.0.0
+                - transport.host=localhost
+                - network.host=0.0.0.0
+                - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+              ulimits:
+                memlock:
+                  soft: -1
+                  hard: -1
+              mem_limit: 1g
+            # Graylog: https://hub.docker.com/r/graylog/graylog/
+            graylog:
+              image: graylog/graylog:4.3
+              volumes:
+                - /var/data/graylog:/usr/share/graylog/data
+              environment:
+                # CHANGE ME (must be at least 16 characters)!
+                - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+                # Password: admin
+                - ***REMOVED***
+                - GRAYLOG_HTTP_EXTERNAL_URI=http://0.0.0.0:9000/
+              entrypoint: /usr/bin/tini -- wait-for-it elasticsearch:9200 --  /docker-entrypoint.sh
+              links:
+                  - mongodb:mongo
+                  - elasticsearch
+              restart: always
+              depends_on:
+                - mongodb
+                - elasticsearch
+              ports:
+                # Graylog web interface and REST API
+                - 9000:9000
+                # Syslog TCP
+                - 1514:1514
+                # Syslog UDP
+                - 1514:1514/udp
+                # GELF TCP
+                - 12201:12201
+                # GELF UDP
+                - 12201:12201/udp
+          # Volumes for persisting data, see https://docs.docker.com/engine/admin/volumes/volumes/
+          # volumes:
+            # mongo_data:
+              # driver: local
+            # es_data:
+              # driver: local
+            # graylog_data:
+              # driver: local
+
   # Required to use local dns server
   links:
     - path: /etc/resolv.conf
@@ -232,18 +288,6 @@ systemd:
   units:
     - name: firewalld.service
       enabled: true
-
-    # TODO remove autologin after testing
-    - name: serial-getty@ttyS0.service
-      dropins:
-      - name: autologin-core.conf
-        contents: |
-          [Service]
-          # Override Execstart in main unit
-          ExecStart=
-          # Add new Execstart with `-` prefix to ignore failure
-          ExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM
-          TTYVTDisallocate=no
     
     - name: podman-secrets.service
       enabled: true
@@ -254,8 +298,7 @@ systemd:
         Wants=network-online.target
 
         [Service]
-        Type=Oneshot
-        # ExecStart=bash -c 'if podman secret create v4l2rtspserver /var/container_secrets/v4l2rtspserver; then shred -zu /var/container_secrets/v4l2rtspserver; else return 1; fi'
+        Type=oneshot
         ExecStart=/usr/local/bin/create_podman_secrets.sh
 
         [Install]
@@ -272,14 +315,15 @@ systemd:
         Wants=network-online.target
 
         [Service]
-        Type=Simple
+        Type=simple
         TimeoutStartSec=0
         RestartSec=30
         Restart=on-failure
         ExecStartPre=-/bin/podman kill emby
         ExecStartPre=-/bin/podman rm emby
-        ExecStartPre=/bin/podman pull docker.io/linuxserver/emby:latest
-        ExecStart=/bin/podman run --name=emby \
+        ExecStart=/bin/podman run \
+            --name emby \
+            --pull newer \
             -v emby_config:/config \
             -v /var/data/emby:/mnt/:Z \
             -p 8096:8096 \
@@ -301,16 +345,15 @@ systemd:
         Wants=network-online.target
 
         [Service]
-        Type=Simple
+        Type=simple
         TimeoutStartSec=0
         RestartSec=30
         Restart=on-failure
         ExecStartPre=-/bin/podman kill motion
         ExecStartPre=-/bin/podman rm motion
-        ExecStartPre=/bin/podman pull docker.io/motionproject/motion
-        ExecStartPre=/bin/podman pull docker.io/bash:5.2.2
         ExecStartPre=/bin/podman run --rm \
             --name motion-config-editor \
+            --pull newer \
             --secret motion_camera1,type=env \
             --secret motion_camera2,type=env \
             --secret motion_camera3,type=env \
@@ -319,7 +362,10 @@ systemd:
             -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
             docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
 
-        ExecStart=/bin/podman run --name=motion \
+        # --device /dev/dri:/dev/dri \\
+        ExecStart=/bin/podman run \
+            --name motion \
+            --pull newer \
             -e TZ="America/New_York" \
             -v motion_config:/usr/local/etc/motion \
             -v /var/data/motion:/var/lib/motion:Z \
@@ -337,7 +383,7 @@ systemd:
         Wants=cleanup-motion-videos.timer
 
         [Service]
-        Type=Oneshot
+        Type=oneshot
         ExecStart=find /var/data/motion -name "*.mkv" -type f -mtime +30 -delete
 
         [Install]
@@ -369,13 +415,14 @@ systemd:
         Wants=network-online.target
 
         [Service]
-        Type=Simple
+        Type=simple
         TimeoutStartSec=0
         Restart=on-failure
         ExecStartPre=-/bin/podman kill pihole
         ExecStartPre=-/bin/podman rm pihole
-        ExecStartPre=-/bin/podman pull docker.io/pihole/pihole:latest
-        ExecStart=/bin/podman run --name pihole \
+        ExecStart=/bin/podman run \
+            --name pihole \
+            --pull newer \
             --secret pihole,type=env,target=ADMIN_PASSWORD \
             -e WEBPASSWORD="${ADMIN_PASSWORD}" \
             -e TZ="America/New_York" \
@@ -405,11 +452,12 @@ systemd:
         After=network.target
 
         [Service]
-        Type=Simple
+        Type=simple
         Restart=on-failure
         RestartSec=30
-        ExecStartPre=-/bin/podman pull docker.io/mvance/unbound:latest
-        ExecStart=/bin/podman run --name unbound \
+        ExecStart=/bin/podman run \
+            --name unbound \
+            --pull newer \
             -p 5353:53/tcp \
             -p 5353:53/udp \
             --restart=unless-stopped \
@@ -424,8 +472,8 @@ systemd:
         [Unit]
         Description=V4L2 RTSP Server
         After=network.target
-        BindsTo=dev-video0.device
-        After=dev-video0.device
+        # BindsTo=dev-video0.device
+        # After=dev-video0.device
 
         [Service]
         Type=simple
@@ -433,20 +481,23 @@ systemd:
         RestartSec=30
         ExecStartPre=-/bin/podman kill v4l2rtspserver
         ExecStartPre=-/bin/podman rm v4l2rtspserver
-        ExecStartPre=-/bin/podman pull docker.io/mpromonet/v4l2rtspserver:latest-amd64
-        ExecStart=podman run --name v4l2rtspserver \
-            --secret v4l2rtspserver,type=env,target=SECRET \
-            --secret v4l2rtspserver_url,type=env,target=URL \
-            --device=/dev/video0 \
-            -p 8554:8554 \
-            docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
-            -S1 \
-            -R home -U user:"${SECRET}" \
-            -C1 -A48000 -aS16_LE \
-            -u "${URL}"
+        ExecStart=podman run \
+                    --name v4l2rtspserver \
+                    --pull newer \
+                    --secret v4l2rtspserver,type=env,target=SECRET \
+                    --secret v4l2rtspserver_url,type=env,target=URL \
+                    --device /dev/v4l/by-id/usb-HD_Camera_Manufacturer_HD_USB_Camera_2020101401-video-index0:/dev/video0 \
+                    --device /dev/snd:/dev/snd \
+                    -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
+                    -p 8554:8554 \
+                    --entrypoint "/bin/bash" \
+                    docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
+                    -c "/usr/local/bin/start_v4l2rtspserver.sh"
+        ExecStop=/bin/podman stop v4l2rtspserver
 
         [Install]
         WantedBy=multi-user.target
+
     
     # TODO setup graylog with podman-compose
       
@@ -474,7 +525,7 @@ systemd:
         Restart=on-failure
         RestartSec=60
         ExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \
-            vim htop
+            vim htop screen
         ExecStart=/bin/touch /var/lib/%N.stamp
 
         [Install]
