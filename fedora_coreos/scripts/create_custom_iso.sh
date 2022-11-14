@@ -1,11 +1,10 @@
 #!/bin/bash -x
 
 main() {
-
     make production
 
     ISOS="isos"
-    DEFAULT_ISO="fedora-coreos-36.20221001.3.0-live.x86_64.iso"
+    DEFAULT_ISO="fedora-coreos-36.20221014.3.1-live.x86_64.iso"
     DEVICE="/dev/nvme0n1"
     IGNITION="files/ignitions/kore_production.ign"
     # IGNITION_URL="https://10.50.0.10:8000/kore_production.ign"
@@ -18,7 +17,6 @@ main() {
 }
 
 create_new_iso() {
-
         # --post-install="${POST_INSTALL_SCRIPT}" \
         # --ignition-url="${IGNITION_URL}" \
     coreos-installer iso customize \
@@ -29,7 +27,6 @@ create_new_iso() {
 }
 
 check_remove_iso() {
-
     if [[ -f $NEW_ISO ]]; then
         echo "Deleting existing iso image ${NEW_ISO}"
         if rm "${NEW_ISO}"; then
@@ -38,6 +35,16 @@ check_remove_iso() {
             abort "Failed to delete ${NEW_ISO}"
         fi
     fi
+}
+
+download_latest_iso() {
+    podman run --security-opt \
+        label=disable \
+        --pull=always \
+        --rm \
+        -v .:/data \
+        -w /data \
+        quay.io/coreos/coreos-installer:release download -s stable -p metal -f iso
 }
 
 
@@ -54,7 +61,6 @@ check_remove_iso() {
 # }
 
 abort() {
-
     echo "$1"
     exit 1
 }

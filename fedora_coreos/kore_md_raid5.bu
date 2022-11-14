@@ -1,0 +1,79 @@
+
+variant: fcos
+version: 1.4.0
+storage:
+  raid:
+    - name: data
+      level: raid5
+      devices:
+        - /dev/disk/by-partlabel/raid5.1
+        - /dev/disk/by-partlabel/raid5.2
+        - /dev/disk/by-partlabel/raid5.3
+        - /dev/disk/by-partlabel/raid5.4
+        - /dev/disk/by-partlabel/raid5.5
+      spares: 1
+      # See the md wiki for chunk size info
+      # https://raid.wiki.kernel.org/index.php/RAID_setup#Chunk_sizes
+      options:
+        - --chunk
+        - 128K
+  luks:
+  - name: data
+    device: /dev/md/data
+    wipe_volume: false
+    uuid: 7ec40b01-0b9c-4f98-841a-fc9392ab8510
+    key_file:
+      local: luks_keys/data.key
+  filesystems:
+    - device: /dev/md/data
+      path: /var/data
+      format: xfs
+      label: data
+      with_mount_unit: true
+
+  disks:
+    - device: /dev/disk/by-id/wwn-0x5000c500c8e4bd14
+      wipe_table: false
+      partitions:
+        - label: raid5.1
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c937816a
+      wipe_table: false
+      partitions:
+        - label: raid5.2
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c8e196b3
+      wipe_table: false
+      partitions:
+        - label: raid5.3
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c8e37087
+      wipe_table: false
+      partitions:
+        - label: raid5.4
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c8a40802
+      wipe_table: false
+      partitions:
+        - label: raid5.5
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true

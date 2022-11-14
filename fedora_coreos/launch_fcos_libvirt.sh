@@ -19,8 +19,11 @@ sudo chown qemu: "$IGNITION_CONFIG"
 sudo chown qemu: "$IMAGE"
 
 # --tpm backend.type=emulator,backend.version=2.0,model=tpm-tis \
+# --boot menu=on,useserial=on \
 virt-install --connect="qemu:///system" --name="${VM_NAME}" --vcpus="${VCPUS}" --memory="${RAM_MB}" \
-    --os-variant="fedora-coreos-$STREAM" --import --graphics=none \
+    --os-variant="fedora-coreos-$STREAM" \
+    --import \
+    --graphics=spice \
     --disk="size=${DISK_GB},backing_store=${IMAGE}" \
     --disk="size=${RAID_DISK_GB}" \
     --disk="size=${RAID_DISK_GB}" \
@@ -28,7 +31,6 @@ virt-install --connect="qemu:///system" --name="${VM_NAME}" --vcpus="${VCPUS}" -
     --disk="size=${RAID_DISK_GB}" \
     --disk="size=${RAID_DISK_GB}" \
     --network network=default \
-    --boot menu=on,useserial=on \
     --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGNITION_CONFIG}"
 
 # virsh attach-device "${VM_NAME}" --file cam_usb.xml --current

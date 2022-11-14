@@ -1,0 +1,72 @@
+variant: fcos
+version: 1.4.0
+storage:
+  filesystems:
+    - path: /var/data
+      device: /dev/disk/by-partlabel/raid10.1
+      format: btrfs
+      label: data
+      options:
+        - -m
+        - raid10
+        - -d
+        - raid10
+        - /dev/disk/by-partlabel/raid10.1
+        - /dev/disk/by-partlabel/raid10.2
+        - /dev/disk/by-partlabel/raid10.3
+        - /dev/disk/by-partlabel/raid10.4
+      mount_options:
+        - device=/dev/disk/by-partlabel/raid10.1
+        - device=/dev/disk/by-partlabel/raid10.2
+        - device=/dev/disk/by-partlabel/raid10.3
+        - device=/dev/disk/by-partlabel/raid10.4
+        - compress=zstd:1
+        - x-systemd.device-timeout=0
+      with_mount_unit: true
+      wipe_filesystem: false
+  disks:
+    - device: /dev/disk/by-id/wwn-0x5000c500c8e4bd14
+      wipe_table: false
+      partitions:
+        - label: raid10.1
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c937816a
+      wipe_table: false
+      partitions:
+        - label: raid10.2
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c8e196b3
+      wipe_table: false
+      partitions:
+        - label: raid10.3
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c8e37087
+      wipe_table: false
+      partitions:
+        - label: raid10.4
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500c8a40802
+      wipe_table: false
+      partitions:
+        - label: backups
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true

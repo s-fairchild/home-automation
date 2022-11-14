@@ -9,7 +9,7 @@ storage:
     - device: /dev/vdb
       wipe_table: true
       partitions:
-        - label: raid5.1
+        - label: raid10.1
           number: 1
           size_mib: 0
           start_mib: 0
@@ -17,7 +17,7 @@ storage:
     - device: /dev/vdc
       wipe_table: true
       partitions:
-        - label: raid5.2
+        - label: raid10.2
           number: 1
           size_mib: 0
           start_mib: 0
@@ -25,7 +25,7 @@ storage:
     - device: /dev/vdd
       wipe_table: true
       partitions:
-        - label: raid5.3
+        - label: raid10.3
           number: 1
           size_mib: 0
           start_mib: 0
@@ -33,7 +33,7 @@ storage:
     - device: /dev/vde
       wipe_table: true
       partitions:
-        - label: raid5.4
+        - label: raid10.4
           number: 1
           size_mib: 0
           start_mib: 0
@@ -41,21 +41,11 @@ storage:
     - device: /dev/vdf
       wipe_table: true
       partitions:
-        - label: raid5.5
+        - label: backups
           number: 1
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
-  filesystems:
-    - path: /var/data
-      device: /dev/mapper/data
-      format: btrfs
-      label: data
-      # https://raid.wiki.kernel.org/index.php/RAID_setup#XFS
-      # options:
-        # - su=128k
-        # - sw=3
-      with_mount_unit: true
 systemd:
   units:
     - name: serial-getty@ttyS0.service

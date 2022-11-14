@@ -1,7 +1,6 @@
 variant: fcos
 version: 1.4.0
 passwd:
-  # TODO setup users for sftp and nfs
   groups:
     - name: backups
     - name: cctv
@@ -31,29 +30,15 @@ passwd:
       # groups:
         # - video
     - name: emby
+      uid: 1003
+      groups:
+        - movies
+      system: true
+    - name: plex
+      system: true
     - name: pihole
+      system: true
 storage:
-  luks:
-  - name: data
-    device: /dev/md/data
-    wipe_volume: true
-    key_file:
-      local: luks_keys/data.key
-  raid:
-    - name: data
-      level: raid5
-      devices:
-        - /dev/disk/by-partlabel/raid5.1
-        - /dev/disk/by-partlabel/raid5.2
-        - /dev/disk/by-partlabel/raid5.3
-        - /dev/disk/by-partlabel/raid5.4
-        - /dev/disk/by-partlabel/raid5.5
-      spares: 1
-      # See the md wiki for chunk size info
-      # https://raid.wiki.kernel.org/index.php/RAID_setup#Chunk_sizes
-      options:
-        - --chunk
-        - 128K
   directories:
     - path: /var/data/motion
       user: 
@@ -80,16 +65,35 @@ storage:
         name: emby
       group:
         name: movies
-    - path: /var/data/emby/stuff
+    - path: /var/data/plex
+      user:
+        name: plex
+      group:
+        name: movies
+    - path: /var/data/emby/Movies
       user:
         name: emby
       group:
         name: movies
+      mode: 0770
+    - path: /var/data/emby/TV
+      user:
+        name: emby
+      group:
+        name: movies
+      mode: 0770
+    - path: /var/data/emby/Mixed
+      user:
+        name: emby
+      group:
+        name: movies
+      mode: 0770
     - path: /var/data/deja/r10
       user:
         name: deja
       group:
         name: backups
+      mode: 0770
     - path: /var/container_secrets
       user:
         name: root
@@ -143,6 +147,11 @@ storage:
       overwrite: true
       contents:
         local: container_secrets/motion_camera3
+    - path: /var/container_secrets/plex
+      overwrite: true
+      contents:
+        local: container_secrets/plex
+
     # Used by podman-secrets.service
     - path: /usr/local/bin/create_podman_secrets.sh
       overwrite: true
@@ -207,6 +216,20 @@ storage:
       contents:
         local: unbound/unbound.conf
       mode: 0644
+    
+    - path: /etc/wireguard/wg0.conf
+      mode: 0600
+      contents:
+        inline: |
+          [Interface]
+          Address = 192.168.71.1/24,fdc9:3c6b:21c7:e6bd::1/64
+          PrivateKey = cHnFbnHm5ZuN1/VVd+C+/lElCqJKTirnglNEjgdTt3E=
+          ListenPort = 51820
+
+          [Peer]
+          PublicKey = Aq3buMNhjUMYoUfhW/GJJtZ613j8dRw/w8aDbfP6v1E=
+          PresharedKey = PoQHdBJ90qM+j8S2aWFLddjvO1Sd9sqaYZsPRwANbfs=
+          AllowedIPs = 192.168.71.0/24,fdc9:3c6b:21c7:e6bd::/64
 
     - path: /usr/local/bin/graylog.yaml
       overwrite: true
@@ -303,11 +326,62 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
+      
+    # TODO add --device for hw install
+    - name: plex.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Plex Media Server
+        After=network-online.target
+        Wants=network-online.target
+
+        # https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/
+        # https://hub.docker.com/r/linuxserver/plex
+        # https://hub.docker.com/r/plexinc/pms-docker/
+        [Service]
+        Type=simple
+        TimeoutStartSec=0
+        RestartSec=30
+        Restart=on-failure
+        ExecStartPre=-/bin/podman kill plex
+        ExecStartPre=-/bin/podman rm plex
+          # Optional ports, read linked docs for usage
+          # -p 32400:32400 \
+          # -p 1900:1900/udp \
+          # -p 3005:3005 \
+          # -p 5353:5353/udp \
+          # -p 8324:8324 \
+          # -p 32410:32410/udp \
+          # -p 32412:32412/udp \
+          # -p 32413:32413/udp \
+          # -p 32414:32414/udp \
+          # -p 32469:32469
+                # --device /dev/dri:/dev/dri \
+                # -e PLEX_CLAIM="<claimToken>" \
+        ExecStart=/bin/podman run \
+                --name plex \
+                --pull newer \
+                --secret plex \
+                --device /dev/dri:/dev/dri \
+                -e PUID=1000 \
+                -e PGID=1000 \
+                -p 32400:32400/tcp \
+                -e TZ="America/New_York" \
+                -e FILE__PASSWORD=/run/secrets/plex \
+                -e VERSION=docker \
+                -h plex.kore \
+                -v plex_config:/config \
+                --mount type=tmpfs,tmpfs-size=1G,destination=/transcode \
+                -v /var/data/plex:/data \
+                docker.io/linuxserver/plex:latest
+        ExecStop=/bin/podman stop plex
+
+        [Install]
+        WantedBy=multi-user.target
 
     - name: emby.service
       enabled: true
-            # TODO add this device when installing to hardware
-            # --device /dev/dri:/dev/dri \
       contents: |
         [Unit]
         Description=Emby Media Server
@@ -322,15 +396,18 @@ systemd:
         ExecStartPre=-/bin/podman kill emby
         ExecStartPre=-/bin/podman rm emby
         ExecStart=/bin/podman run \
-            --name emby \
-            --pull newer \
-            -v emby_config:/config \
-            -v /var/data/emby:/mnt/:Z \
-            -p 8096:8096 \
-            -e UID=1002 \
-            -e GID=1002 \
-            -e GIDLIST=100 \
-            docker.io/linuxserver/emby:latest
+                --name emby \
+                --pull newer \
+                --device /dev/dri:/dev/dri \
+                -v emby_config:/config \
+                -v /var/data/emby/Movies:/mnt/Movies:Z \
+                -v /var/data/emby/TV:/mnt/TV:Z \
+                -v /var/data/emby/Mixed:/mnt/Mixed:Z \
+                -p 8096:8096 \
+                -e UID=1003 \
+                -e GID=1002 \
+                -e GIDLIST=100 \
+                docker.io/linuxserver/emby:latest
         ExecStop=/bin/podman stop emby
 
         [Install]
@@ -357,12 +434,12 @@ systemd:
             --secret motion_camera1,type=env \
             --secret motion_camera2,type=env \
             --secret motion_camera3,type=env \
+            --device /dev/dri:/dev/dri \
             -v /var/usrlocal/etc/motion:/mnt/motion:Z \
             -v motion_config:/mnt/temp_config \
             -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
             docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
 
-        # --device /dev/dri:/dev/dri \\
         ExecStart=/bin/podman run \
             --name motion \
             --pull newer \
@@ -418,19 +495,21 @@ systemd:
         Type=simple
         TimeoutStartSec=0
         Restart=on-failure
+        RestartSec=30
         ExecStartPre=-/bin/podman kill pihole
         ExecStartPre=-/bin/podman rm pihole
+            # TODO script password creation volume similar to motion
+            # --secret pihole,target=ADMIN_PASSWORD \
+            # -e WEBPASSWORD="${ADMIN_PASSWORD}" \
         ExecStart=/bin/podman run \
             --name pihole \
             --pull newer \
-            --secret pihole,type=env,target=ADMIN_PASSWORD \
-            -e WEBPASSWORD="${ADMIN_PASSWORD}" \
             -e TZ="America/New_York" \
             -v pihole-etc:/etc/pihole \
             -v pihole-dnsmasq.d:/etc/dnsmasq.d \
             -v pihole-log:/var/log \
-            --dns=127.0.0.1 \
-            --dns=1.1.1.1 \
+            --dns 127.0.0.1 \
+            --dns 1.1.1.1 \
             --hostname pi.hole \
             -e VIRTUAL_HOST=pi.hole \
             -e PROXY_LOCATION=pi.hole \
@@ -445,7 +524,7 @@ systemd:
         WantedBy=multi-user.target
 
     - name: unbound.service
-      enabled: true
+      enabled: false
       contents: |
         [Unit]        
         Description=Unbound DNS Server
@@ -472,8 +551,9 @@ systemd:
         [Unit]
         Description=V4L2 RTSP Server
         After=network.target
-        # BindsTo=dev-video0.device
-        # After=dev-video0.device
+        # TODO troubleshoot why this device file isn't appearing
+        # BindsTo=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d1-1\x2d1.3-1\x2d1.3:1.0-video4linux-video1.device
+        # After=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d1-1\x2d1.3-1\x2d1.3:1.0-video4linux-video1.device
 
         [Service]
         Type=simple
@@ -498,8 +578,12 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
+    - name: wg-quick@wg0.service
+      enabled: true    
     
-    # TODO setup graylog with podman-compose
+    # TODO 
+    # 1. setup graylog with podman-compose
+    # 2. configure nginx reverse https proxy
       
       # Install admin tools
       # `--allow-inactive` ensures that rpm-ostree does not return an error

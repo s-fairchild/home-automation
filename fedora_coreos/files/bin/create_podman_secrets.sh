@@ -6,6 +6,7 @@ secrets=(
     motion_camera1
     motion_camera2
     motion_camera3
+    plex
 )
 secret_dir=/var/container_secrets
 
