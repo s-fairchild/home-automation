@@ -1,6 +1,7 @@
 .vscode/
 container_secrets/
-wireguard_keys/
+wireguard/
+openvpn/
 luks_keys/
 isos/
 *.ign

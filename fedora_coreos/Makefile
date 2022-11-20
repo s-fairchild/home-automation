@@ -17,4 +17,4 @@ production: common
 	butane -s -d files/ -p kore_production.bu > files/ignitions/kore_production.ign
 
 wireguard-qr-code:
-	qrencode -t ansiutf8 -r wireguard_keys/client/client1.conf
+	qrencode -t ansiutf8 -r wireguard/client/client1.conf
