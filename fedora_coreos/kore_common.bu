@@ -177,7 +177,7 @@ storage:
     - path: /etc/udev/rules.d/99-usb-cam.rules
       contents:
         inline: |
-          KERNEL=="video[0-9]*", ACTION=="add", SUBSYSTEM=="video4linux", SUBSYSTEMS=="usb", ATTR{index}=="0", ATTRS{idVendor}=="32e4", ATTRS{idProduct}=="9310", GROUP="video", SYMLINK+="usb-cam0", TAG+="systemd", ENV{SYSTEMD_WANTS}="v4l2rtspserver.service"
+          KERNEL=="video0", SYMLINK="usbcam0", TAG+="systemd", ENV{SYSTEMD_WANTS}="v4l2rtspserver.service"
 
     # User configs
     - path: /etc/profile.d/zz-default-editor.sh
@@ -264,6 +264,7 @@ storage:
                 - /var/data/graylog:/usr/share/graylog/data
               environment:
                 # CHANGE ME (must be at least 16 characters)!
+                # TODO change secret
                 - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
                 # Password: admin
                 - ***REMOVED***
@@ -492,9 +493,6 @@ storage:
 
 systemd:
   units:
-    - name: firewalld.service
-      enabled: true
-    
     - name: podman-secrets.service
       enabled: true
       contents: |
@@ -734,9 +732,8 @@ systemd:
         [Unit]
         Description=V4L2 RTSP Server
         After=network.target
-        # TODO troubleshoot why this device file isn't appearing
-        # BindsTo=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d1-1\x2d1.3-1\x2d1.3:1.0-video4linux-video1.device
-        # After=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d1-1\x2d1.3-1\x2d1.3:1.0-video4linux-video1.device
+        BindsTo=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
+        After=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
 
         [Service]
         Type=simple
@@ -744,22 +741,44 @@ systemd:
         RestartSec=30
         ExecStartPre=-/bin/podman kill v4l2rtspserver
         ExecStartPre=-/bin/podman rm v4l2rtspserver
-        ExecStart=podman run \
-                    --name v4l2rtspserver \
-                    --pull newer \
-                    --secret v4l2rtspserver,type=env,target=SECRET \
-                    --secret v4l2rtspserver_url,type=env,target=URL \
-                    --device /dev/v4l/by-id/usb-HD_Camera_Manufacturer_HD_USB_Camera_2020101401-video-index0:/dev/video0 \
-                    --device /dev/snd:/dev/snd \
-                    -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
-                    -p 8554:8554 \
-                    --entrypoint "/bin/bash" \
-                    docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
-                    -c "/usr/local/bin/start_v4l2rtspserver.sh"
+        ExecStart=/bin/podman run \
+                      --name v4l2rtspserver \
+                      --pull newer \
+                      --secret v4l2rtspserver,type=env,target=SECRET \
+                      --secret v4l2rtspserver_url,type=env,target=URL \
+                      --device /dev/usbcam0:/dev/video0 \
+                      --device /dev/snd:/dev/snd \
+                      -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
+                      -p 8554:8554/tcp \
+                      -p 8554:8554/udp \
+                      --entrypoint "/bin/bash" \
+                      docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
+                      -c "/usr/local/bin/start_v4l2rtspserver.sh"
         ExecStop=/bin/podman stop v4l2rtspserver
 
         [Install]
         WantedBy=multi-user.target
+    
+    # TODO finish nginx reverse proxy setup
+    # - name: nginx.service
+    #   enabled: true
+    #   contents: |
+    #     [Unit]
+
+    #     [Service]
+    #     Type=simple
+    #     Restart=always
+    #     RestartSec=30
+    #     ExecStartPre=-/bin/podman kill nginx
+    #     ExecStartPre=-/bin/podman rm nginx
+    #     ExecStart=podman run \
+    #                   --pull newer \
+    #                   -p 8080:80 \
+    #                   -p 443:443 \
+    #                   registry.access.redhat.com/ubi9/nginx-120:1-75
+
+    #     [Install]
+    #     WantedBy=multi-user.target
 
     - name: wg-quick@wg0.service
       enabled: false
