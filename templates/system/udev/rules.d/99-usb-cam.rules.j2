@@ -1,1 +1,0 @@
-ACTION=="add", KERNEL=="video[0-9]*", SUBSYSTEM=="video4linux", SUBSYSTEMS=="usb", ATTR{index}=="0", ATTRS{idVendor}=="{{ idVendor }}", ATTRS{idProduct}=="{{ idProduct }}", GROUP="video", SYMLINK+="usb-cam0", TAG+="systemd", ENV{SYSTEMD_WANTS}="v4l2rtspserver.service"

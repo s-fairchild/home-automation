@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short>Internal</short>
+  <description>For use on internal networks. You mostly trust the other computers on the networks to not harm your computer. Only selected incoming connections are accepted.</description>
+  <service name="ssh"/>
+  <service name="dhcp"/>
+  <port port="53" protocol="udp"/>
+  <port port="53" protocol="tcp"/>
+  <port port="443" protocol="tcp"/>
+  <port port="8080" protocol="tcp"/>
+  <port port="8554" protocol="udp"/>
+  <port port="8554" protocol="tcp"/>
+  <interface name="br0"/>
+  <interface name="wlp1s0"/>
+  <source address="10.50.0.0/24"/>
+  <source address="10.0.0.0/24"/>
+  <source address="192.168.1.0/24"/>
+  <forward/>
+</zone>

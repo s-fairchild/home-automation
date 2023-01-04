@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policy target="CONTINUE">
+  <service name="http"/>
+  <service name="https"/>
+  <port port="53" protocol="tcp"/>
+  <port port="53" protocol="udp"/>
+  <port port="80" protocol="tcp"/>
+  <port port="443" protocol="tcp"/>
+  <port port="123" protocol="udp"/>
+  <port port="993" protocol="tcp"/>
+  <port port="993" protocol="udp"/>
+  <port port="995" protocol="udp"/>
+  <port port="995" protocol="tcp"/>
+  <port port="1025-65535" protocol="udp"/>
+  <port port="1025-65535" protocol="tcp"/>
+  <port port="22" protocol="tcp"/>
+  <port port="443" protocol="udp"/>
+  <port port="89" protocol="tcp"/>
+  <port port="465" protocol="tcp"/>
+  <protocol value="icmp"/>
+  <ingress-zone name="internal"/>
+  <egress-zone name="external"/>
+</policy>

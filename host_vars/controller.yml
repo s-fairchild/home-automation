@@ -1,5 +1,0 @@
-home: "{{ lookup('env', 'HOME') }}"
-user: "{{ lookup('env', 'USER') }}"
-user_home: "/home/{{ user }}/"
-rtsp_address: {{ ansible_facts['rpi3'] }}
-

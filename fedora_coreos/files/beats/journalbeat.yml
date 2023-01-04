@@ -1,0 +1,33 @@
+# https://www.elastic.co/guide/en/beats/journalbeat/7.10/journalbeat-reference-yml.html
+# fields_under_root: true
+# fields.collector_node_id: a71df949-e0ab-4dfe-97e5-5fb816b22c6e
+# fields.gl2_source_collector: 638a53f29f8e34641b42e4c9
+
+journalbeat.inputs:
+- paths: []
+
+  # Position to start reading from journal. Valid values: head, tail, cursor
+  seek: cursor
+  # Fallback position if no cursor data is available.
+  cursor_seek_fallback: head
+
+output.logstash:
+  # Boolean flag to enable or disable the output module.
+  enabled: true
+
+  # Graylog host and the beats input
+  hosts: ["127.0.0.1:5044"]
+
+  # Number of workers per Graylog host.
+  worker: 1
+
+  # Set gzip compression level.
+  compression_level: 0
+
+  # Configure escaping HTML symbols in strings.
+  #escape_html: false
+
+  # If enabled only a subset of events in a batch of events is transferred per
+  # transaction.  The number of events to be sent increases up to `bulk_max_size`
+  # if no error is encountered.
+  slow_start: true

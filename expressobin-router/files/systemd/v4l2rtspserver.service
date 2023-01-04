@@ -1,0 +1,29 @@
+[Unit]
+Description=V4L2 RTSP Server
+After=network.target
+BindsTo=sys-devices-platform-soc-soc:internal\x2dregs\x40d0000000-d005e000.usb-usb1-1\x2d1-1\x2d1.3-1\x2d1.3:1.0-video4linux-video0.device
+After=sys-devices-platform-soc-soc:internal\x2dregs\x40d0000000-d005e000.usb-usb1-1\x2d1-1\x2d1.3-1\x2d1.3:1.0-video4linux-video0.device
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=30
+ExecStartPre=-/bin/podman kill v4l2rtspserver
+ExecStartPre=-/bin/podman rm v4l2rtspserver
+ExecStart=podman run \
+            --name v4l2rtspserver \
+            --pull newer \
+            --secret v4l2rtspserver,type=env,target=SECRET \
+            --secret v4l2rtspserver_url,type=env,target=URL \
+            --device /dev/usbcam0:/dev/video0 \
+            --device /dev/snd:/dev/snd \
+            -v /usr/local/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
+            -p 10.50.0.1:8554:8554/tcp \
+	        -p 10.50.0.1:8554:8554/udp \
+            --entrypoint "/bin/bash" \
+            localhost/mpromonet/v4l2rtspserver:latest \
+            -c "/usr/local/bin/start_v4l2rtspserver.sh"
+ExecStop=/bin/podman stop v4l2rtspserver
+
+[Install]
+WantedBy=multi-user.target

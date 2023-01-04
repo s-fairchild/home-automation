@@ -1,0 +1,20 @@
+[Unit]
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=30
+ExecStartPre=-/bin/podman kill auditbeat
+ExecStartPre=-/bin/podman rm auditbeat
+ExecStart=/bin/podman run --name=auditbeat \
+                          --pull newer \
+                          -v /usr/local/etc/auditbeat.yml:/usr/share/auditbeat/auditbeat.yml:ro \
+                          --cap-add="AUDIT_CONTROL" \
+                          --cap-add="AUDIT_READ" \
+                          --pid=host \
+                          docker.elastic.co/beats/auditbeat-oss:7.13.0-arm64 \
+                          -e --strict.perms=false
+
+[Install]
+WantedBy=multi-user.target

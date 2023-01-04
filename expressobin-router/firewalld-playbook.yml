@@ -1,0 +1,125 @@
+- name: Manage Expressobin firewall rules as a router
+  hosts: "expresso"
+  become: true
+  tasks:
+
+  - name: Update all packages
+    community.general.pacman:
+      update_cache: true
+      upgrade: true 
+      state: latest
+
+  - name: Install Arch Linux packages
+    community.general.pacman:
+      pkg:
+        - inetutils
+        - vim
+        - git
+        - nmap
+        - screen
+        - tcpdump
+        - openssl-1.1
+        - bash-completion
+        - htop
+        - zram-generator
+        - core/man
+        - pacman-contrib
+        - aardvark-dns
+        - podman
+        - community/apcupsd
+        - firewalld
+        - alsa-lib
+        - screen
+        - extra/alsa-card-profiles
+        - extra/alsa-plugins
+        - extra/alsa-utils
+        - extra/alsa-firmware
+        - extra/pulseaudio-alsa
+        - extra/lsof
+        - usbutils
+        # Needed for dig
+        - extra/bind
+      state: latest
+      extra_args: --noconfirm --needed
+  
+  - name: Install custom udev rules for usb camera
+    copy:
+      src: files/udev/rules.d/83-usb-camera.rules
+      dest: /etc/udev/rules.d/83-usb-camera.rules
+      owner: root
+      group: root
+      mode: 0644
+  
+  - name: Reload udev rules
+    shell: udevadm control --reload-rules && udevadm trigger
+
+  - name: Install pihole.service
+    copy:
+      src: files/systemd/pihole.service
+      dest: /usr/lib/systemd/system/pihole.service
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Install v4l2rtspserver.service
+    copy:
+      src: files/systemd/v4l2rtspserver.service
+      dest: /usr/lib/systemd/system/v4l2rtspserver.service
+      owner: root
+      group: root
+      mode: 0644
+  
+  - name: Install v4l2rtspserver start script
+    copy:
+      src: files/bin/start_v4l2rtspserver.sh
+      dest: /usr/local/bin/start_v4l2rtspserver.sh
+      owner: root
+      group: root
+      mode: 0744
+  
+  - name: Enable pihole.service
+    systemd:
+      state: started
+      enabled: true
+      name: pihole
+      daemon_reload: true
+  
+  - name: Enable v4l2rtpserver.service
+    systemd:
+      state: started
+      enabled: true
+      name: v4l2rtspserver
+      daemon_reload: true
+  
+  - name: Enable firewalld.service
+    systemd:
+      state: started
+      enabled: true
+      name: firewalld
+  
+  - name: Copy firewalld policies
+    copy:
+      src: files/firewalld/policies/
+      dest: /etc/firewalld/policies/
+
+  - name: Copy firewalld zones
+    copy:
+      src: files/firewalld/zones/
+      dest: /etc/firewalld/zones/
+  
+  - name: Reload firewalld rules
+    shell: firewall-cmd --reload
+  
+  - name: Enable firewalld denied logging
+    shell: firewall-cmd --set-log-denied=all
+  
+  - name: Copy dhcpd config
+    copy:
+      src: files/dhcpd.conf
+      dest: /etc/dhcpd.conf
+  
+  - name: Enable dhcpd4.service
+    systemd:
+      name: dhcpd4
+      state: started
+      enabled: true

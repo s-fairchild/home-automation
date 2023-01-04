@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone target="DROP">
+  <short>External</short>
+  <description>For use on external networks. You do not trust the other computers on networks to not harm your computer. Only selected incoming connections are accepted.</description>
+  <masquerade/>
+  <forward-port port="1194" protocol="tcp" to-port="1194" to-addr="10.8.0.1"/>
+  <forward-port port="1194" protocol="udp" to-port="1194" to-addr="10.9.0.1"/>
+  <interface name="wan"/>
+  <forward/>
+</zone>

@@ -1,0 +1,74 @@
+- name: Manage Expressobin firewall rules as a router
+  hosts: expresso
+  become: true
+  tasks:
+
+  - name: Install metricbeat.service
+    copy:
+      src: files/systemd/metricbeat.service
+      dest: /usr/lib/systemd/system/metricbeat.service
+      owner: root 
+      group: root
+      mode: 0644
+  
+  - name: Install metricbeat.yml
+    copy:
+      src: files/metricbeat/metricbeat.yml
+      dest: /usr/local/etc/metricbeat.yml
+      owner: root 
+      group: root
+      mode: 0644
+
+  # TODO update to mainline kernel to get metricbeat working
+  - name: Enable metricbeat.service
+    systemd:
+      state: started
+      enabled: true
+      name: metricbeat
+      daemon_reload: true
+
+  - name: Install auditbeat.service
+    copy:
+      src: files/systemd/auditbeat.service
+      dest: /usr/lib/systemd/system/auditbeat.service
+      owner: root 
+      group: root
+      mode: 0644
+
+  - name: Install auditbeat.yml
+    copy:
+      src: files/auditbeat/auditbeat.yml
+      dest: /usr/local/etc/auditbeat.yml
+      owner: root 
+      group: root
+      mode: 0644
+
+  - name: Enable auditbeat.service
+    systemd:
+      state: started
+      enabled: true
+      name: auditbeat
+      daemon_reload: true
+
+  - name: Install packetbeat.service
+    copy:
+      src: files/systemd/packetbeat.service
+      dest: /usr/lib/systemd/system/packetbeat.service
+      owner: root 
+      group: root
+      mode: 0644
+
+  - name: Install packetbeat.yml
+    copy:
+      src: files/packetbeat/packetbeat.yml
+      dest: /usr/local/etc/packetbeat.yml
+      owner: root 
+      group: root
+      mode: 0644
+
+  - name: Enable packetbeat.service
+    systemd:
+      state: started
+      enabled: true
+      name: packetbeat
+      daemon_reload: true

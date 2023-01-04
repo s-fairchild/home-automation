@@ -7,8 +7,22 @@ ignition:
       - local: ignitions/kore_btrfs_raid10.ign
       # - local: ignitions/kore_md_raid5.ign
 storage:
+  disks:
+    - device: /dev/disk/by-id/nvme-BC501A_NVMe_SK_hynix_128GB_CS99N6126135Y9M40
+      wipe_table: false
+      partitions:
+      - number: 4
+        label: root
+
   filesystems:
     - device: /dev/disk/by-partlabel/root
-      format: btrfs
+      format: xfs
       label: root
-      wipe_filesystem: true
+      wipe_filesystem: false
+      uuid: 910678ff-f77e-4a7d-8d53-86f2ac47a823
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: |
+          kore

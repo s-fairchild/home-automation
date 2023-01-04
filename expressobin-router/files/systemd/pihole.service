@@ -1,0 +1,33 @@
+[Unit]
+Description=Pihole DNS Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+TimeoutStartSec=0
+Restart=on-failure
+RestartSec=30
+ExecStartPre=-/bin/podman kill pihole
+ExecStartPre=-/bin/podman rm pihole
+ExecStartPre=-/bin/podman pull docker.io/pihole/pihole:latest
+ExecStart=/bin/podman run \
+            --name pihole \
+            -e TZ=America/New_York \
+            -v etc-pihole:/etc/pihole/ \
+            -v etc-dnsmasq.d:/etc/dnsmasq.d/ \
+            -v pihole-log:/var/log/ \
+            --dns=127.0.0.1 \
+            --dns=1.1.1.1 \
+            --hostname pi.hole \
+            -e VIRTUAL_HOST=pi.hole \
+            -e PROXY_LOCATION=pi.hole \
+            -e ServerIP=10.50.0.1 \
+            -p 10.50.0.1:53:53/udp \
+            -p 10.50.0.1:53:53/tcp \
+            -p 10.50.0.1:8080:80 \
+            docker.io/pihole/pihole:latest
+ExecStop=/bin/podman kill pihole
+
+[Install]
+WantedBy=multi-user.target

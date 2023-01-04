@@ -6,6 +6,7 @@ storage:
       device: /dev/disk/by-partlabel/raid10.1
       format: btrfs
       label: data
+      uuid: 71a2b5bd-d5db-45b7-aadd-6202d2e2bccf
       options:
         - -m
         - raid10

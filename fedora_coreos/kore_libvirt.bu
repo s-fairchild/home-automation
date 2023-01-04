@@ -5,6 +5,20 @@ ignition:
     merge:
       - local: ignitions/kore_common.ign
 storage:
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: |
+          kore-test-vm
+
+    - path: /etc/resolv.conf.local-dns
+      overwrite: true
+      contents:
+        inline: |
+          nameserver 10.50.0.1
+          nameserver 8.8.8.8
+          nameserver 8.8.4.4
   disks:
     - device: /dev/vdb
       wipe_table: true
@@ -14,6 +28,7 @@ storage:
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+
     - device: /dev/vdc
       wipe_table: true
       partitions:
@@ -22,6 +37,7 @@ storage:
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          
     - device: /dev/vdd
       wipe_table: true
       partitions:
@@ -30,6 +46,7 @@ storage:
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+
     - device: /dev/vde
       wipe_table: true
       partitions:
@@ -38,6 +55,7 @@ storage:
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          
     - device: /dev/vdf
       wipe_table: true
       partitions:
@@ -46,6 +64,7 @@ storage:
           size_mib: 0
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+
 systemd:
   units:
     - name: serial-getty@ttyS0.service

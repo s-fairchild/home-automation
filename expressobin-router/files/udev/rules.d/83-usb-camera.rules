@@ -1,0 +1,1 @@
+KERNEL=="video[0-9]*", SUBSYSTEM=="video4linux", SUBSYSTEMS=="usb", ATTRS{idVendor}=="32e4", ATTRS{idProduct}=="9310", SYMLINK+="driveway-cam0"

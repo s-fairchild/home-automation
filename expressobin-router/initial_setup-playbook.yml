@@ -1,0 +1,182 @@
+- name: Secure Install
+  hosts: "{{ host }}"
+  vars_files:
+    - group_vars/env.yml
+  become: true
+  become_method: su
+
+  tasks:
+    # TODO Add ignore firewalld blockinfile
+    # IgnorePkg   = firewalld
+    - name: Configure parallel pacman downloads
+      blockinfile:
+        block: |
+          [options]
+          ParallelDownloads=1
+
+        path: /etc/pacman.conf
+        backup: true
+      tags: config
+
+    - name: Set hostname
+      hostname:
+        name: expresso
+        use: systemd
+    
+    - name: Disable systemd-resolved
+      systemd:
+        name: systemd-resolved
+        state: stopped
+        enabled: false
+        masked: true
+    
+    - name: Disable dnsmasq
+      systemd:
+        name: dnsmasq
+        state: stopped
+        enabled: false
+        masked: true
+    
+    - name: Install resolv.conf
+      copy:
+        src: files/resolv.conf
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Create user account
+      ansible.builtin.user:
+        name: "{{ user }}"
+        shell: '/bin/bash'
+        expires: -1
+        append: true
+        groups:
+          - wheel
+          - audio
+          - tty
+          - video
+        generate_ssh_key: true
+
+    - name: Add authorized ssh key for "{{ user }}"
+      ansible.posix.authorized_key:
+        user: "{{ user }}"
+        state: present
+        key: "{{ lookup('file', home + '/.ssh/id_rsa.pub') }}"
+
+    - name: Customize set aliases for root
+      blockinfile:
+        path: /root/.bashrc
+        owner: root
+        group: root
+        mode: 0644
+        create: true
+        block: |
+          alias ls='ls --color=auto'
+          alias ll='ls -lhtr --color=auto'
+
+    - name: Customize bash profile for root
+      blockinfile:
+        path: /root/.bash_profile
+        owner: root
+        group: root
+        mode: 0644
+        create: true
+        block: |
+          # Get the aliases and functions
+          if [ -f ~/.bashrc ]; then
+              . ~/.bashrc
+          fi
+      tags: shell-env
+
+    - name: Remove old PS1 variable for "{{ user }}"
+      lineinfile:
+        path: "{{ user_home }}/.bashrc"
+        regexp: '^PS1='
+        state: absent
+
+    - name: Customize bash profile for "{{ user }}"
+      blockinfile:
+        path: "{{ user_home }}/.bash_profile"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: 0644
+        create: true
+        block: |
+          # Get the aliases and functions
+          if [ -f ~/.bashrc ]; then
+              . ~/.bashrc
+          fi
+
+    - name: Customize bash env for "{{ user }}"
+      blockinfile:
+        path: "{{ user_home }}/.bashrc"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: 0644
+        create: true
+        block: |
+          PS1='[\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w \$\[\033[00m]\$ '
+          export PATH="${PATH}:$HOME/.local/bin:$HOME/bin:/usr/local/go/bin"
+          alias ll='ls -lhtr --color=auto'
+
+    - name: Install sudo
+      community.general.pacman:
+        update_cache: yes
+        pkg:
+          - sudo
+        extra_args: --needed
+
+    # - name: Create sudoers.d
+    #   file:
+    #     state: directory
+    #     owner: root
+    #     group: root
+    #     mode: '750'
+    #     path: /etc/sudoers.d/
+
+    # - name: Install sudoers file
+    #   template:
+    #     src: files/sudoers.d/user_nopasswd.j2
+    #     dest: /etc/sudoers.d/user_nopasswd
+    #     mode: '600'
+    #     owner: root
+    #     group: root
+    #     force: true
+    #     validate: visudo -csf %s
+
+    # TODO configure sudoers for wheel group
+    # %wheel	ALL=(ALL)	ALL
+
+    # Switch logged in user from alarm to new user
+    - name: switch to new user "{{ user }}"
+      set_fact:
+        current_user: "{{ user }}"
+        ansible_user: "{{ user }}"
+
+    - name: Remove default alarm user
+      user:
+        name: alarm
+        state: absent
+        remove: true
+        force: true
+
+    - name: Do not allow password authentication to ssh
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication '
+        insertafter: '^#PasswordAuthentication '
+        line: PasswordAuthentication no
+      tags: ssh-config
+
+    - name: Restart sshd
+      service:
+        name: sshd
+        state: restarted
+      tags: ssh-config
+
+    - name: Disable and lock root password
+      user:
+        name: root
+        password: "!"
+        password_lock: true

@@ -1,8 +1,12 @@
 .vscode/
-container_secrets/
-wireguard/
-openvpn/
-luks_keys/
-isos/
+*.secret
+*.tar.gz
+*.crt
+*.pem
+*.key
 *.ign
 *.iso
+*.iso.sig
+*.qcow2
+*~
+fedora_coreos/files/graylog/*

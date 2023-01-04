@@ -1,0 +1,25 @@
+[Unit]
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=30
+ExecStartPre=-/bin/podman kill metricbeat
+ExecStartPre=-/bin/podman rm metricbeat
+ExecStart=/bin/podman run --name metricbeat \
+                    --pull newer \
+                    -v /usr/local/etc/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro \
+                    -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
+                    -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
+                    -v /proc:/hostfs/proc:ro \
+                    -v /:/hostfs:ro \
+                    --net=host \
+                    --cap-add sys_ptrace \
+                    --cap-add dac_read_search \
+                    docker.elastic.co/beats/metricbeat-oss:8.5.2-arm64 \
+                    -e -system.hostfs=/hostfs
+                    # docker.elastic.co/beats/metricbeat-oss:7.13.0-arm64
+
+[Install]
+WantedBy=multi-user.target

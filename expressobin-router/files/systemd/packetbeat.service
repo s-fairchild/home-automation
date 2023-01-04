@@ -1,0 +1,21 @@
+[Unit]
+After=network.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=30
+ExecStartPre=-/bin/podman kill packetbeat
+ExecStartPre=-/bin/podman rm packetbeat
+ExecStart=/bin/podman run --name=packetbeat \
+                          --pull newer \
+                          --user=packetbeat \
+                          -v /usr/local/etc/packetbeat.yml:/usr/share/packetbeat/packetbeat.yml:ro \
+                          --cap-add="NET_RAW" \
+                          --cap-add="NET_ADMIN" \
+                          --net host \
+                          docker.elastic.co/beats/packetbeat-oss:7.13.0-arm64 \
+                          --strict.perms=false
+
+[Install]
+WantedBy=multi-user.target

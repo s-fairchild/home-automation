@@ -1,5 +1,9 @@
 variant: fcos
 version: 1.4.0
+kernel_arguments:
+  should_exist:
+    # Attempt to disable power saving autosuspend
+    - usbcore.autosuspend=-1
 passwd:
   groups:
     - name: backups
@@ -10,103 +14,112 @@ passwd:
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILKn4SiC50J4Yre5jcFdLvXH1VaNoW1ko5ng8nT/ZxAA steven@rh-thinkpad-p1
-    - name: deja
-      ssh_authorized_keys:
-        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILPKVaSQZMv4JXoV66CP2jBaoanPBwiO2NOYwFdgqmVV steven@G15
       groups:
         - backups
     - name: steven
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILPKVaSQZMv4JXoV66CP2jBaoanPBwiO2NOYwFdgqmVV steven@G15
       groups:
+        - wheel
         - backups
         - cctv
         - movies
-    - name: motion
-      home_dir: /var/data/motion
-      no_create_home: true
-      system: true
-      gecos: Motion Camera System Account
-      # groups:
-        # - video
-    - name: emby
-      uid: 1003
-      groups:
-        - movies
-      system: true
-    - name: plex
-      system: true
-    - name: pihole
-      system: true
+
 storage:
   directories:
+    - path: /var/data
+      user:
+        name: root
+      group:
+        name: root
+      mode: 0755
+
     - path: /var/data/motion
       user: 
-        name: motion
+        name: root
       group: 
         name: cctv
+
     - path: /var/data/motion/frontdoor
       user: 
-        name: motion
+        name: root
       group: 
         name: cctv
-    - path: /var/data/motion/dustins_room
+
+    - path: /var/data/motion/bedroom1
       user: 
-        name: motion
+        name: root
       group: 
         name: cctv
+
     - path: /var/data/motion/driveway
       user: 
-        name: motion
+        name: root
       group: 
         name: cctv
+
     - path: /var/data/emby
       user:
-        name: emby
+        name: root
       group:
         name: movies
+
     - path: /var/data/plex
       user:
-        name: plex
+        name: root
       group:
         name: movies
+
     - path: /var/data/emby/Movies
       user:
-        name: emby
+        name: root
       group:
         name: movies
       mode: 0770
+
     - path: /var/data/emby/TV
       user:
-        name: emby
+        name: root
       group:
         name: movies
       mode: 0770
+
     - path: /var/data/emby/Mixed
       user:
-        name: emby
+        name: root
       group:
         name: movies
       mode: 0770
+
     - path: /var/data/deja/r10
       user:
-        name: deja
+        name: steven
       group:
-        name: backups
-      mode: 0770
-    - path: /var/container_secrets
+        name: steven
+      mode: 0700
+
+    - path: /var/data/deja/g15
       user:
-        name: root
+        name: steven
       group:
-        name: root
+        name: steven
+      mode: 0700
 
   files:
-    # System config
-    - path: /etc/hostname
+    # Needed for elasticsearch
+    - path: /etc/sysctl.d/99-vm_max_map.conf
       mode: 0644
       contents:
         inline: |
-          kore
+          vm.max_map_count=262144
+
+    - path: /etc/sysctl.d/99-vm_max_map.conf
+      mode: 0644
+      contents:
+        inline: |
+          vm.max_map_count=262144
 
     - path: /etc/systemd/zram-generator.conf
       mode: 0644
@@ -114,43 +127,12 @@ storage:
         inline: |
           # This config file enables a /dev/zram0 device with the default settings
           [zram0]
-
-    - path: /etc/resolv.conf.local-dns
-      overwrite: true
-      contents:
-        inline: |
-          nameserver 127.0.0.1
-          nameserver 8.8.8.8
-          nameserver 8.8.4.4
     
-    - path: /var/container_secrets/v4l2rtspserver
+    - path: /var/container_secrets.tar
       overwrite: true
       contents:
-        local: container_secrets/v4l2rtspserver
-    - path: /var/container_secrets/v4l2rtspserver_url
-      overwrite: true
-      contents:
-        local: container_secrets/v4l2rtspserver_url
-    - path: /var/container_secrets/pihole
-      overwrite: true
-      contents:
-        local: container_secrets/pihole
-    - path: /var/container_secrets/motion_camera1
-      overwrite: true
-      contents:
-        local: container_secrets/motion_camera1
-    - path: /var/container_secrets/motion_camera2
-      overwrite: true
-      contents:
-        local: container_secrets/motion_camera2
-    - path: /var/container_secrets/motion_camera3
-      overwrite: true
-      contents:
-        local: container_secrets/motion_camera3
-    - path: /var/container_secrets/plex
-      overwrite: true
-      contents:
-        local: container_secrets/plex
+        local: container_secrets.tar.gz
+        compression: gzip
 
     # Used by podman-secrets.service
     - path: /usr/local/bin/create_podman_secrets.sh
@@ -178,15 +160,34 @@ storage:
       contents:
         inline: |
           KERNEL=="video0", SYMLINK="usbcam0", TAG+="systemd", ENV{SYSTEMD_WANTS}="v4l2rtspserver.service"
+    
+    - path: /etc/udev/rules.d/50-usb_power_save.rules
+      contents:
+        inline: |
+          # blacklist for usb autosuspend
+          ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="32e4", ATTR{idProduct}=="9310", GOTO="power_usb_rules_end"
 
-    # User configs
+          ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="auto"
+          LABEL="power_usb_rules_end"
+
     - path: /etc/profile.d/zz-default-editor.sh
       overwrite: true
       contents:
         inline: |
           export EDITOR=vim
 
-    # App configs
+    - path: /usr/local/etc/graylog/.env
+      mode: 0600
+      contents:
+        local: graylog/.env
+    
+    - path: /usr/local/bin/check_podman_network.sh
+      overwrite: true
+      mode: 0700
+      contents:
+        local: bin/check_podman_network.sh
+    
+    # Motion config files
     - path: /usr/local/etc/motion/motion.conf
       overwrite: true
       contents:
@@ -217,279 +218,54 @@ storage:
         local: unbound/unbound.conf
       mode: 0644
     
-    - path: /etc/wireguard/wg0.conf
-      mode: 0600
-      contents:
-        inline: |
-          [Interface]
-          Address = 192.168.71.1/24,fdc9:3c6b:21c7:e6bd::1/64
-          PrivateKey = cHnFbnHm5ZuN1/VVd+C+/lElCqJKTirnglNEjgdTt3E=
-          ListenPort = 51820
-
-          [Peer]
-          PublicKey = Aq3buMNhjUMYoUfhW/GJJtZ613j8dRw/w8aDbfP6v1E=
-          PresharedKey = PoQHdBJ90qM+j8S2aWFLddjvO1Sd9sqaYZsPRwANbfs=
-          AllowedIPs = 192.168.71.0/24,fdc9:3c6b:21c7:e6bd::/64
-
-    - path: /usr/local/bin/graylog.yaml
+    # Beats config files
+    - path: /usr/local/etc/journalbeat.yml
       overwrite: true
+      mode: 0644
       contents:
-        inline: |
-          version: '2'
-          services:
-            # MongoDB: https://hub.docker.com/_/mongo/
-            mongodb:
-              image: mongo:4.2
-              volumes:
-                - /var/data/mongo:/data/db
-            # Elasticsearch: https://www.elastic.co/guide/en/elasticsearch/reference/7.10/docker.html
-            elasticsearch:
-              image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
-              volumes:
-                - /var/data/elasticsearch:/usr/share/elasticsearch/data
-              environment:
-                - http.host=0.0.0.0
-                - transport.host=localhost
-                - network.host=0.0.0.0
-                - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-              ulimits:
-                memlock:
-                  soft: -1
-                  hard: -1
-              mem_limit: 1g
-            # Graylog: https://hub.docker.com/r/graylog/graylog/
-            graylog:
-              image: graylog/graylog:4.3
-              volumes:
-                - /var/data/graylog:/usr/share/graylog/data
-              environment:
-                # CHANGE ME (must be at least 16 characters)!
-                # TODO change secret
-                - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
-                # Password: admin
-                - ***REMOVED***
-                - GRAYLOG_HTTP_EXTERNAL_URI=http://0.0.0.0:9000/
-              entrypoint: /usr/bin/tini -- wait-for-it elasticsearch:9200 --  /docker-entrypoint.sh
-              links:
-                  - mongodb:mongo
-                  - elasticsearch
-              restart: always
-              depends_on:
-                - mongodb
-                - elasticsearch
-              ports:
-                # Graylog web interface and REST API
-                - 9000:9000
-                # Syslog TCP
-                - 1514:1514
-                # Syslog UDP
-                - 1514:1514/udp
-                # GELF TCP
-                - 12201:12201
-                # GELF UDP
-                - 12201:12201/udp
-          # Volumes for persisting data, see https://docs.docker.com/engine/admin/volumes/volumes/
-          # volumes:
-            # mongo_data:
-              # driver: local
-            # es_data:
-              # driver: local
-            # graylog_data:
-              # driver: local
+        local: beats/journalbeat.yml
     
+    - path: /usr/local/etc/metricbeat.yml
+      overwrite: true
+      mode: 0644
+      contents:
+        local: beats/metricbeat.yml
+
+    # Openvpn config files
     - path: /etc/openvpn/server/keys/ca.key
       overwrite: true
       mode: 0600
       contents:
-        local: files/openvpn/keys/ca.key
+        local: openvpn/keys/ca.key
 
     - path: /etc/openvpn/server/keys/ca.crt
       overwrite: true
       mode: 0600
       contents:
-        local: files/openvpn/keys/ca.crt
+        local: openvpn/keys/ca.crt
 
     - path: /etc/openvpn/server/keys/kore.key
       overwrite: true
       mode: 0600
       contents:
-        local: files/openvpn/keys/kore.key
+        local: openvpn/keys/kore.key
 
     - path: /etc/openvpn/server/keys/dh.pem
       overwrite: true
       mode: 0600
       contents:
-        local: files/openvpn/keys/dh.pem
+        local: openvpn/keys/dh.pem
 
     - path: /etc/openvpn/server/serverudp.conf
       overwrite: true
       mode: 0600
       contents:
-        inline: |
-          ########################################
-          # Sample OpenVPN config file for
-          # 2.0-style multi-client udp server
-          #
-          # Adapted from http://openvpn.sourceforge.net/20notes.html
-          #
-          # tun-style tunnel
-
-          port 1194
-          dev tun
-
-          # Use "local" to set the source address on multi-homed hosts
-          #local [IP address]
-
-          # TLS parms
-          tls-server 
-          ca keys/ca.crt
-          cert keys/kore.crt
-          key keys/kore.key
-          dh keys/dh.pem
-
-          # Tell OpenVPN to be a multi-client udp server
-          mode server
-
-          # proto tcp-server
-          comp-lzo
-          # tcp-queue-limit 256
-          tcp-queue-limit 1024
-          bcast-buffers 1024
-
-          # The server's virtual endpoints
-          ifconfig 10.9.0.1 10.9.0.2
-
-          # Pool of /30 subnets to be allocated to clients.
-          # When a client connects, an --ifconfig command
-          # will be automatically generated and pushed back to
-          # the client.
-          ifconfig-pool 10.9.0.4 10.9.0.255
-
-          # Push route to client to bind it to our local
-          # virtual endpoint.
-          push "route 10.9.0.1 255.255.255.255"
-
-          # Push any routes the client needs to get in
-          # to the local network.
-          push "route 10.50.0.0 255.255.255.0"
-
-          # Push DHCP options to Windows clients.
-          # push "dhcp-option DOMAIN example.com"
-          push "dhcp-option DNS 10.50.0.1"
-          # push "dhcp-option WINS 192.168.0.1"
-
-          # Client should attempt reconnection on link
-          # failure.
-          keepalive 10 60
-
-          # Delete client instances after some period
-          # of inactivity.
-          inactive 600
-
-          # Route the --ifconfig pool range into the
-          # OpenVPN server.
-          route 10.9.0.0 255.255.255.0
-
-          # The server doesn't need privileges
-          user openvpn
-          group openvpn
-
-          # Keep TUN devices and keys open across restarts.
-          persist-tun
-          persist-key
-
-          verb 4
+        local: openvpn/server/serverudp.conf
     
     - path: /etc/openvpn/server/servertcp.conf
       overwrite: true
       contents:
-        inline: |
-          # Sample OpenVPN config file for
-          # 2.0-style multi-client udp server
-          #
-          # Adapted from http://openvpn.sourceforge.net/20notes.html
-          #
-          # tun-style tunnel
-
-          port 1194
-          dev tun
-
-          # Use "local" to set the source address on multi-homed hosts
-          #local [IP address]
-
-          # TLS parms
-          tls-server 
-          ca keys/ca.crt
-          cert keys/kore.crt
-          key keys/kore.key
-          dh keys/dh.pem
-
-          # Tell OpenVPN to be a multi-client udp server
-          mode server
-
-          proto tcp-server
-
-          comp-lzo
-          # tcp-queue-limit 256
-          tcp-queue-limit 1024
-          bcast-buffers 1024
-
-          # The server's virtual endpoints
-          ifconfig 10.8.0.1 10.8.0.2
-
-          # Pool of /30 subnets to be allocated to clients.
-          # When a client connects, an --ifconfig command
-          # will be automatically generated and pushed back to
-          # the client.
-          ifconfig-pool 10.8.0.4 10.8.0.255
-
-          # Push route to client to bind it to our local
-          # virtual endpoint.
-          push "route 10.8.0.1 255.255.255.255"
-
-          # Push any routes the client needs to get in
-          # to the local network.
-          push "route 10.50.0.0 255.255.255.0"
-
-          # Push DHCP options to Windows clients.
-          # push "dhcp-option DOMAIN example.com"
-          push "dhcp-option DNS 10.50.0.1"
-          # push "dhcp-option WINS 192.168.0.1"
-
-          # Client should attempt reconnection on link
-          # failure.
-          keepalive 10 60
-
-          # Delete client instances after some period
-          # of inactivity.
-          inactive 600
-
-          # Route the --ifconfig pool range into the
-          # OpenVPN server.
-          route 10.8.0.0 255.255.255.0
-
-          # The server doesn't need privileges
-          user openvpn
-          group openvpn
-
-          # Keep TUN devices and keys open across restarts.
-          persist-tun
-          persist-key
-
-          verb 4
-
-
-
-  # Required to use local dns server
-  links:
-    - path: /etc/resolv.conf
-      overwrite: true
-      user:
-        id: 0
-      group:
-        id:
-          0
-      target: /etc/resolv.conf.local-dns
+        local: openvpn/server/servertcp.conf
 
 systemd:
   units:
@@ -500,21 +276,26 @@ systemd:
         Description=Create podman secrets
         After=network-online.target
         Wants=network-online.target
+        Before=motionplus.service
+        Before=v4l2rtspserver.service
+        Before=pihole.service
+        Before=graylog.service
 
         [Service]
-        Type=oneshot
+        WorkingDirectory=/tmp
+        Type=simple
         ExecStart=/usr/local/bin/create_podman_secrets.sh
 
         [Install]
         WantedBy=multi-user.target
       
-    # TODO add --device for hw install
     - name: plex.service
       enabled: false
       contents: |
         [Unit]
         Description=Plex Media Server
         After=network-online.target
+        After=podman-secrets.service
         Wants=network-online.target
 
         # https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/
@@ -525,6 +306,7 @@ systemd:
         TimeoutStartSec=0
         RestartSec=30
         Restart=on-failure
+        ExecStartPre=-/bin/podman pull docker.io/linuxserver/plex:latest
         ExecStartPre=-/bin/podman kill plex
         ExecStartPre=-/bin/podman rm plex
           # Optional ports, read linked docs for usage
@@ -542,7 +324,6 @@ systemd:
                 # -e PLEX_CLAIM="<claimToken>" \
         ExecStart=/bin/podman run \
                 --name plex \
-                --pull newer \
                 --secret plex \
                 --device /dev/dri:/dev/dri \
                 -e PUID=1000 \
@@ -574,11 +355,11 @@ systemd:
         TimeoutStartSec=0
         RestartSec=30
         Restart=on-failure
+        ExecStartPre=-/bin/podman pull docker.io/linuxserver/emby:latest
         ExecStartPre=-/bin/podman kill emby
         ExecStartPre=-/bin/podman rm emby
         ExecStart=/bin/podman run \
                 --name emby \
-                --pull newer \
                 --device /dev/dri:/dev/dri \
                 -v emby_config:/config \
                 -v /var/data/emby/Movies:/mnt/Movies:Z \
@@ -594,12 +375,14 @@ systemd:
         [Install]
         WantedBy=multi-user.target
     
-    - name: motion.service
-      enabled: true
+    # TODO troubleshoot motionplus and resolve netcam disconnecting problem
+    - name: motionplus.service
+      enabled: false
       contents: |
         [Unit]
-        Description=Motion Video Server
+        Description=Motionplus Video Server
         After=network-online.target
+        After=podman-secrets.service
         Wants=network-online.target
 
         [Service]
@@ -607,23 +390,76 @@ systemd:
         TimeoutStartSec=0
         RestartSec=30
         Restart=on-failure
-        ExecStartPre=-/bin/podman kill motion
-        ExecStartPre=-/bin/podman rm motion
+        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
+
+        ExecStartPre=/bin/podman run --rm \
+            --rm \
+            --name motion-config-editor \
+            --pull newer \
+            --secret motion_camera1,type=env \
+            --secret motion_camera2,type=env \
+            --secret motion_camera3,type=env \
+            --secret v4l2rtspserver_camera1_url,type=env \
+            --secret v4l2rtspserver_camera2_url,type=env \
+            --secret v4l2rtspserver_camera3_url,type=env \
+            --device /dev/dri:/dev/dri \
+            -v /var/usrlocal/etc/motionplus:/mnt/motion:Z \
+            -v motionplus:/mnt/temp_config \
+            -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
+            docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
+
+        ExecStartPre=-/bin/podman kill motionplus
+        ExecStartPre=-/bin/podman rm motionplus
+        ExecStartPre=-/bin/podman pull docker.io/steve51516/motionplus:latest
+        ExecStart=/bin/podman run \
+            --name motionplus \
+            -e TZ="America/New_York" \
+            -v motionplus:/usr/local/etc/motionplus \
+            -v /var/data/motionplus:/var/lib/motionplus:Z \
+            -p 8080:8080 \
+            docker.io/steve51516/motionplus:latest
+        ExecStop=/bin/podman stop motionplus
+        ExecStopPost=/bin/podman volume rm motionplus
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: motion.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Motion Video Server
+        After=network-online.target
+        After=podman-secrets.service
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        TimeoutStartSec=0
+        RestartSec=30
+        Restart=on-failure
+        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
+
         ExecStartPre=/bin/podman run --rm \
             --name motion-config-editor \
             --pull newer \
             --secret motion_camera1,type=env \
             --secret motion_camera2,type=env \
             --secret motion_camera3,type=env \
+            --secret v4l2rtspserver_camera1_url,type=env \
+            --secret v4l2rtspserver_camera2_url,type=env \
+            --secret v4l2rtspserver_camera3_url,type=env \
             --device /dev/dri:/dev/dri \
             -v /var/usrlocal/etc/motion:/mnt/motion:Z \
             -v motion_config:/mnt/temp_config \
             -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
             docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
 
+        ExecStartPre=-/bin/podman pull docker.io/motionproject/motion:latest
+        ExecStartPre=-/bin/podman kill motion
+        ExecStartPre=-/bin/podman rm motion
         ExecStart=/bin/podman run \
             --name motion \
-            --pull newer \
             -e TZ="America/New_York" \
             -v motion_config:/usr/local/etc/motion \
             -v /var/data/motion:/var/lib/motion:Z \
@@ -633,7 +469,7 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
-    
+
     - name: cleanup-motion-videos.service
       enabled: false
       contents: |
@@ -661,15 +497,13 @@ systemd:
         [Install]
         WantedBy=timers.target
 
-    - name: systemd-resolved.service
-      enabled: false
-    
     - name: pihole.service
-      enabled: true
+      enabled: false
       contents: |
         [Unit]
         Description=Pihole DNS Server
         After=network-online.target
+        After=podman-secrets.service
         Wants=network-online.target
 
         [Service]
@@ -677,6 +511,7 @@ systemd:
         TimeoutStartSec=0
         Restart=on-failure
         RestartSec=30
+        ExecStartPre=-/bin/podman pull docker.io/pihole/pihole:latest
         ExecStartPre=-/bin/podman kill pihole
         ExecStartPre=-/bin/podman rm pihole
             # TODO script password creation volume similar to motion
@@ -684,7 +519,6 @@ systemd:
             # -e WEBPASSWORD="${ADMIN_PASSWORD}" \
         ExecStart=/bin/podman run \
             --name pihole \
-            --pull newer \
             -e TZ="America/New_York" \
             -v pihole-etc:/etc/pihole \
             -v pihole-dnsmasq.d:/etc/dnsmasq.d \
@@ -704,12 +538,14 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
+    # Used as upstream dns for pihole
     - name: unbound.service
       enabled: false
       contents: |
         [Unit]        
         Description=Unbound DNS Server
         After=network.target
+        Wants=network-online.target
 
         [Service]
         Type=simple
@@ -732,20 +568,24 @@ systemd:
         [Unit]
         Description=V4L2 RTSP Server
         After=network.target
+        Wants=network-online.target
         BindsTo=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
         After=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
+        After=podman-secrets.service
 
         [Service]
         Type=simple
-        Restart=always
+        Restart=on-failure
         RestartSec=30
         ExecStartPre=-/bin/podman kill v4l2rtspserver
         ExecStartPre=-/bin/podman rm v4l2rtspserver
+        ExecStartPre=-/bin/podman pull docker.io/mpromonet/v4l2rtspserver:latest-amd64
+
+        # Entrypoint is replaced with bash -c bin/start_v4l2rtspserver.sh to allow use of podman secrets in entrypoint
         ExecStart=/bin/podman run \
                       --name v4l2rtspserver \
-                      --pull newer \
                       --secret v4l2rtspserver,type=env,target=SECRET \
-                      --secret v4l2rtspserver_url,type=env,target=URL \
+                      --secret v4l2rtspserver_camera3_url,type=env,target=URL \
                       --device /dev/usbcam0:/dev/video0 \
                       --device /dev/snd:/dev/snd \
                       -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
@@ -760,36 +600,228 @@ systemd:
         WantedBy=multi-user.target
     
     # TODO finish nginx reverse proxy setup
-    # - name: nginx.service
-    #   enabled: true
-    #   contents: |
-    #     [Unit]
-
-    #     [Service]
-    #     Type=simple
-    #     Restart=always
-    #     RestartSec=30
-    #     ExecStartPre=-/bin/podman kill nginx
-    #     ExecStartPre=-/bin/podman rm nginx
-    #     ExecStart=podman run \
-    #                   --pull newer \
-    #                   -p 8080:80 \
-    #                   -p 443:443 \
-    #                   registry.access.redhat.com/ubi9/nginx-120:1-75
-
-    #     [Install]
-    #     WantedBy=multi-user.target
-
-    - name: wg-quick@wg0.service
+    - name: nginx.service
       enabled: false
+      contents: |
+        [Unit]
+        After=network.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        RestartSec=30
+        ExecStartPre=-/bin/podman kill nginx
+        ExecStartPre=-/bin/podman rm nginx
+        ExecStart=podman run \
+                      --pull newer \
+                      -p 8080:80 \
+                      -p 443:443 \
+                      registry.access.redhat.com/ubi9/nginx-120:1-75
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: graylog.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Wants=network-online.target
+        After=mongodb.service
+        After=elasticsearch.service
+        After=podman-secrets.service
+
+        [Service]
+        Type=simple
+        Restart=always
+        RestartSec=30
+        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=-/bin/podman pull docker.io/graylog/graylog:4.3
+        ExecStartPre=-/bin/podman kill graylog
+        ExecStartPre=-/bin/podman rm graylog
+
+        ExecStart=/bin/podman run --name=graylog \
+                                  --secret graylog,type=env,target=GRAYLOG_PASSWORD_SECRET \
+                                  --secret graylog_root_password_sha2,type=env,target=GRAYLOG_ROOT_PASSWORD_SHA2 \
+                                  -e "GRAYLOG_NODE_ID_FILE=/usr/share/graylog/data/config/node-id" \
+                                  -e "GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000" \
+                                  -e "GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/" \
+                                  -e "GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200" \
+                                  -e "GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog" \
+                                  -v graylog_data:/usr/share/graylog/data \
+                                  -v "graylog_journal:/usr/share/graylog/data/journal" \
+                                  --net graylog \
+                                  --network-alias "graylog" \
+                                  -p 9000:9000 \
+                                  -p 1514:1514 \
+                                  -p 1514:1514/udp \
+                                  -p 12201:12201 \
+                                  -p 12201:12201/udp \
+                                  -p 5044:5044/tcp \
+                                  -p 5140:5140/udp \
+                                  -p 5140:5140/tcp \
+                                  -p 13301:13301/tcp \
+                                  -p 5555:5555/tcp \
+                                  -p 5555:5555/udp \
+                                  -p 13302:13302/tcp \
+                                  --entrypoint '["/usr/bin/tini", "--", "wait-for-it", "elasticsearch:9200", "--", "/docker-entrypoint.sh"]' \
+                                  docker.io/graylog/graylog:4.3
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: mongodb.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Before=graylog.service
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        RestartSec=30
+        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=-/bin/podman pull docker.io/mongo:5.0
+        ExecStartPre=-/bin/podman kill mongo
+        ExecStartPre=-/bin/podman rm mongo
+
+        ExecStart=/bin/podman run --name=mongo \
+                                  -v graylog_mongo_data:/data/db \
+                                  --net graylog \
+                                  --network-alias mongodb \
+                                  docker.io/mongo:5.0
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: elasticsearch.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Before=graylog.service
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        RestartSec=30
+        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=-/bin/podman pull docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+        ExecStartPre=-/bin/podman kill elasticsearch
+        ExecStartPre=-/bin/podman rm elasticsearch
+
+        ExecStart=/bin/podman run --name=elasticsearch \
+                                  -e http.host=0.0.0.0 \
+                                  -e transport.host=localhost \
+                                  -e network.host=0.0.0.0 \
+                                  -e ES_JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xms2048m -Xmx2048m" \
+                                  -v graylog_es_data:/usr/share/elasticsearch/ \
+                                  --net graylog \
+                                  --network-alias elasticsearch \
+                                  -p 9200:9200 \
+                                  --ulimit memlock=-1:-1 \
+                                  -m 4g \
+                                  docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: metricbeat.service
+      enabled: false
+      contents: |
+        [Unit]
+        After=network.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        RestartSec=30
+        ExecStartPre=-/bin/podman kill metricbeat
+        ExecStartPre=-/bin/podman rm metricbeat
+        ExecStart=/bin/podman run --name metricbeat \
+                          --pull newer \
+                          -v /usr/local/etc/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro \
+                          -v /var/run/docker.sock:/var/run/docker.sock:ro \
+                          -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
+                          -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
+                          -v /proc:/hostfs/proc:ro \
+                          -v /:/hostfs:ro \
+                          --net=host \
+                          --cap-add sys_ptrace \
+                          --cap-add dac_read_search \
+                          docker.elastic.co/beats/metricbeat-oss:7.10.2 \
+                          -e -system.hostfs=/hostfs
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: journalbeat.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        RestartSec=30
+        ExecStartPre=-/bin/podman kill journalbeat
+        ExecStartPre=-/bin/podman rm journalbeat
+        ExecStart=/bin/podman run --name=journalbeat \
+                          --pull newer \
+                          -v /usr/local/etc/journalbeat.yml:/usr/share/journalbeat/journalbeat.yml:ro \
+                          -v /var/log/journal:/var/log/journal:ro \
+                          -v /etc/machine-id:/etc/machine-id:ro \
+                          -v /run/systemd:/run/systemd:ro \
+                          -v /etc/hostname:/etc/hostname:ro \
+                          docker.elastic.co/beats/journalbeat-oss:7.10.2 \
+                          journalbeat -e -strict.perms=false
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: gollum.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        RestartSec=30
+        ExecStartPre=-/bin/podman kill gollum
+        ExecStartPre=-/bin/podman rm gollum
+        ExecStartPre=-/bin/podman pull docker.io/gollumwiki/gollum:master
+        ExecStart=/bin/podman run \
+                              --name gollum \
+                              -u root \
+                              -e GOLLUM_AUTHOR_USERNAME=s-fairchild \
+                              -e GOLLUM_AUTHOR_EMAIL=steve51516@gmail.com \
+                              -p 4567:4567 \
+                              -v gollumwiki:/wiki \
+                              docker.io/gollumwiki/gollum:master \
+                                  --mathjax \
+                                  --mermaid \
+                                  --emoji \
+                                  --user-icons \
+                                  --default-keybinding vim \
+                                  --allow-uploads page
+
+        [Install]
+        WantedBy=multi-user.target
+
     - name: openvpn-server@serverudp.service
       enabled: true
     - name: openvpn-server@servertcp.service
       enabled: true
-    
-    # TODO 
-    # 1. setup graylog with podman-compose
-    # 2. configure nginx reverse https proxy
       
       # Install admin tools
       # `--allow-inactive` ensures that rpm-ostree does not return an error
@@ -815,7 +847,7 @@ systemd:
         Restart=on-failure
         RestartSec=60
         ExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \
-            vim htop screen iotop openvpn
+            vim htop screen iotop openvpn # podman-compose
         ExecStart=/bin/touch /var/lib/%N.stamp
 
         [Install]
