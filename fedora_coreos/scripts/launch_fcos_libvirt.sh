@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 set -o nounset -o errexit
 
@@ -20,22 +20,14 @@ main() {
     RAM_MB="4096"
     STREAM="stable"
     DISK_GB="20"
-    RAID_DISK_GB="10"
 
     set_permissions
 
-    # --tpm backend.type=emulator,backend.version=2.0,model=tpm-tis \
-    # --boot menu=on,useserial=on \
     virt-install --connect="qemu:///system" --name="${VM_NAME}" --vcpus="${VCPUS}" --memory="${RAM_MB}" \
         --os-variant="fedora-coreos-$STREAM" \
         --import \
         --graphics=spice \
         --disk="size=${DISK_GB},backing_store=${IMAGE}" \
-        --disk="size=${RAID_DISK_GB}" \
-        --disk="size=${RAID_DISK_GB}" \
-        --disk="size=${RAID_DISK_GB}" \
-        --disk="size=${RAID_DISK_GB}" \
-        --disk="size=${RAID_DISK_GB}" \
         --network network=default \
         --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGNITION_CONFIG}"
 
@@ -51,13 +43,13 @@ set_permissions() {
 }
 
 get_latest_image() {
-    local p="$1"
+    local pool="$1"
     local latest
-    latest="$(sudo ls -lhtr ${p} | tail -n -1 | cut -d ' ' -f 10)"
+    latest="$(sudo ls -lhtr ${pool} | tail -n -1 | cut -d ' ' -f 9)"
     if [[ -z $latest ]]; then
         abort "failed to find latest fedora coreos image"
     fi
-    echo "${p}/${latest}"
+    echo "${pool}/${latest}"
 }
 
 is_root() {
@@ -85,7 +77,7 @@ usage() {
 
 ARGS:
     -f          Ignition file for machine to use during bootstrap
-    -d          Download the latest ISO image
+    -d          Download the latest .qcow2 libvirt image
     -h          This help message
 
 EXAMPLES:

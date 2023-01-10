@@ -6,7 +6,6 @@ kernel_arguments:
     - usbcore.autosuspend=-1
 passwd:
   groups:
-    - name: backups
     - name: cctv
     - name: movies
   users:
@@ -15,260 +14,233 @@ passwd:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILKn4SiC50J4Yre5jcFdLvXH1VaNoW1ko5ng8nT/ZxAA steven@rh-thinkpad-p1
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILPKVaSQZMv4JXoV66CP2jBaoanPBwiO2NOYwFdgqmVV steven@G15
-      groups:
-        - backups
     - name: steven
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILKn4SiC50J4Yre5jcFdLvXH1VaNoW1ko5ng8nT/ZxAA steven@rh-thinkpad-p1
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILPKVaSQZMv4JXoV66CP2jBaoanPBwiO2NOYwFdgqmVV steven@G15
       groups:
         - wheel
-        - backups
         - cctv
         - movies
-
-storage:
-  directories:
-    - path: /var/data
-      user:
-        name: root
-      group:
-        name: root
-      mode: 0755
-
-    - path: /var/data/motion
-      user: 
-        name: root
-      group: 
-        name: cctv
-
-    - path: /var/data/motion/frontdoor
-      user: 
-        name: root
-      group: 
-        name: cctv
-
-    - path: /var/data/motion/bedroom1
-      user: 
-        name: root
-      group: 
-        name: cctv
-
-    - path: /var/data/motion/driveway
-      user: 
-        name: root
-      group: 
-        name: cctv
-
-    - path: /var/data/emby
-      user:
-        name: root
-      group:
-        name: movies
-
-    - path: /var/data/plex
-      user:
-        name: root
-      group:
-        name: movies
-
-    - path: /var/data/emby/Movies
-      user:
-        name: root
-      group:
-        name: movies
-      mode: 0770
-
-    - path: /var/data/emby/TV
-      user:
-        name: root
-      group:
-        name: movies
-      mode: 0770
-
-    - path: /var/data/emby/Mixed
-      user:
-        name: root
-      group:
-        name: movies
-      mode: 0770
-
-    - path: /var/data/deja/r10
-      user:
-        name: steven
-      group:
-        name: steven
-      mode: 0700
-
-    - path: /var/data/deja/g15
-      user:
-        name: steven
-      group:
-        name: steven
-      mode: 0700
-
-  files:
-    # Needed for elasticsearch
-    - path: /etc/sysctl.d/99-vm_max_map.conf
-      mode: 0644
-      contents:
-        inline: |
-          vm.max_map_count=262144
-
-    - path: /etc/sysctl.d/99-vm_max_map.conf
-      mode: 0644
-      contents:
-        inline: |
-          vm.max_map_count=262144
-
-    - path: /etc/systemd/zram-generator.conf
-      mode: 0644
-      contents:
-        inline: |
-          # This config file enables a /dev/zram0 device with the default settings
-          [zram0]
-    
-    - path: /var/container_secrets.tar
-      overwrite: true
-      contents:
-        local: container_secrets.tar.gz
-        compression: gzip
-
-    # Used by podman-secrets.service
-    - path: /usr/local/bin/create_podman_secrets.sh
-      overwrite: true
-      mode: 0700
-      contents:
-        local: bin/create_podman_secrets.sh
-    
-    # Used by motion to copy secrets into temp config
-    - path: /usr/local/bin/motion_config_editor.sh
-      overwrite: true
-      mode: 0700
-      contents:
-        local: bin/motion_config_editor.sh
-    
-    # Used by v4l2rtspserver.servive
-    - path: /usr/local/bin/start_v4l2rtspserver.sh
-      overwrite: true
-      mode: 0700
-      contents:
-        local: bin/start_v4l2rtspserver.sh
-
-    # Ensure ELP usb camera is added for v4l2rtspserver
-    - path: /etc/udev/rules.d/99-usb-cam.rules
-      contents:
-        inline: |
-          KERNEL=="video0", SYMLINK="usbcam0", TAG+="systemd", ENV{SYSTEMD_WANTS}="v4l2rtspserver.service"
-    
-    - path: /etc/udev/rules.d/50-usb_power_save.rules
-      contents:
-        inline: |
-          # blacklist for usb autosuspend
-          ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="32e4", ATTR{idProduct}=="9310", GOTO="power_usb_rules_end"
-
-          ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="auto"
-          LABEL="power_usb_rules_end"
-
-    - path: /etc/profile.d/zz-default-editor.sh
-      overwrite: true
-      contents:
-        inline: |
-          export EDITOR=vim
-
-    - path: /usr/local/etc/graylog/.env
-      mode: 0600
-      contents:
-        local: graylog/.env
-    
-    - path: /usr/local/bin/check_podman_network.sh
-      overwrite: true
-      mode: 0700
-      contents:
-        local: bin/check_podman_network.sh
-    
-    # Motion config files
-    - path: /usr/local/etc/motion/motion.conf
-      overwrite: true
-      contents:
-        local: motion/motion.conf
-      mode: 0644
-
-    - path: /usr/local/etc/motion/camera1.conf
-      overwrite: true
-      contents:
-        local: motion/camera1.conf
-      mode: 0644
-
-    - path: /usr/local/etc/motion/camera2.conf
-      overwrite: true
-      contents:
-        local: motion/camera2.conf
-      mode: 0644
-
-    - path: /usr/local/etc/motion/camera3.conf
-      overwrite: true
-      contents:
-        local: motion/camera3.conf
-      mode: 0644
-    
-    - path: /usr/local/etc/unbound/unbound.conf
-      overwrite: true
-      contents:
-        local: unbound/unbound.conf
-      mode: 0644
-    
-    # Beats config files
-    - path: /usr/local/etc/journalbeat.yml
-      overwrite: true
-      mode: 0644
-      contents:
-        local: beats/journalbeat.yml
-    
-    - path: /usr/local/etc/metricbeat.yml
-      overwrite: true
-      mode: 0644
-      contents:
-        local: beats/metricbeat.yml
-
-    # Openvpn config files
-    - path: /etc/openvpn/server/keys/ca.key
-      overwrite: true
-      mode: 0600
-      contents:
-        local: openvpn/keys/ca.key
-
-    - path: /etc/openvpn/server/keys/ca.crt
-      overwrite: true
-      mode: 0600
-      contents:
-        local: openvpn/keys/ca.crt
-
-    - path: /etc/openvpn/server/keys/kore.key
-      overwrite: true
-      mode: 0600
-      contents:
-        local: openvpn/keys/kore.key
-
-    - path: /etc/openvpn/server/keys/dh.pem
-      overwrite: true
-      mode: 0600
-      contents:
-        local: openvpn/keys/dh.pem
-
-    - path: /etc/openvpn/server/serverudp.conf
-      overwrite: true
-      mode: 0600
-      contents:
-        local: openvpn/server/serverudp.conf
-    
-    - path: /etc/openvpn/server/servertcp.conf
-      overwrite: true
-      contents:
-        local: openvpn/server/servertcp.conf
-
+    - name: git
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILKn4SiC50J4Yre5jcFdLvXH1VaNoW1ko5ng8nT/ZxAA steven@rh-thinkpad-p1
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILPKVaSQZMv4JXoV66CP2jBaoanPBwiO2NOYwFdgqmVV steven@G15
 systemd:
   units:
+    - name: motionplus.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Motionplus Video Server
+        After=network-online.target
+        After=podman-secrets.service
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        TimeoutStartSec=0
+        RestartSec=30
+        Restart=on-failure
+        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
+
+        # Create a volume with motionplus configuration with placeholder values replaced with podman secrets
+        ExecStartPre=/bin/podman run --rm \
+            --rm \
+            --name motion-config-editor \
+            --secret motion_camera1,type=env \
+            --secret motion_camera2,type=env \
+            --secret motion_camera3,type=env \
+            --secret v4l2rtspserver_camera1_url,type=env \
+            --secret v4l2rtspserver_camera2_url,type=env \
+            --secret v4l2rtspserver_camera3_url,type=env \
+            --device /dev/dri:/dev/dri \
+            -v /var/usrlocal/etc/motion:/mnt/motion:Z \
+            -v motionplus:/mnt/temp_config \
+            -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
+            docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
+
+        ExecStartPre=-/bin/podman kill motionplus
+        ExecStartPre=if podman container exists motionplus; then podman rm motionplus; fi
+        ExecStartPre=-/bin/podman pull docker.io/steve51516/motionplus:latest
+        ExecStart=/bin/podman run \
+            --name motionplus \
+            -e TZ="America/New_York" \
+            -v motionplus:/usr/local/etc/motionplus \
+            -v /var/data/motionplus:/var/lib/motionplus:Z \
+            -p 8080:8080 \
+            docker.io/steve51516/motionplus:latest
+        ExecStop=/bin/podman stop motionplus
+        ExecStopPost=/bin/podman volume rm motionplus
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: motion.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Motion Video Server
+        After=network-online.target
+        After=podman-secrets.service
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        TimeoutStartSec=0
+        RestartSec=30
+        Restart=on-failure
+        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
+
+        ExecStartPre=/bin/podman run --rm \
+            --name motion-config-editor \
+            --secret motion_camera1,type=env \
+            --secret motion_camera2,type=env \
+            --secret motion_camera3,type=env \
+            --secret v4l2rtspserver_camera1_url,type=env \
+            --secret v4l2rtspserver_camera2_url,type=env \
+            --secret v4l2rtspserver_camera3_url,type=env \
+            --device /dev/dri:/dev/dri \
+            -v /var/usrlocal/etc/motion:/mnt/motion:Z \
+            -v motion_config:/mnt/temp_config \
+            -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
+            docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
+
+        ExecStartPre=-/bin/podman pull docker.io/motionproject/motion:latest
+        ExecStartPre=-/bin/podman kill motion
+        ExecStartPre=-/bin/podman rm motion
+        ExecStart=/bin/podman run \
+            --name motion \
+            -e TZ="America/New_York" \
+            -v motion_config:/usr/local/etc/motion \
+            -v /var/data/motion:/var/lib/motion:Z \
+            docker.io/motionproject/motion:latest
+        ExecStop=/bin/podman stop motion
+        ExecStopPost=/bin/podman volume rm motion_config
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: v4l2rtspserver.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=V4L2 RTSP Server
+        After=network.target
+        Wants=network-online.target
+        BindsTo=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
+        After=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
+        After=podman-secrets.service
+
+        [Service]
+        Type=simple
+        Restart=on-failure
+        RestartSec=30
+        ExecStartPre=-/bin/podman kill v4l2rtspserver
+        ExecStartPre=-/bin/podman rm v4l2rtspserver
+        ExecStartPre=-/bin/podman pull docker.io/mpromonet/v4l2rtspserver:latest-amd64
+
+        # Entrypoint is replaced with bash -c bin/start_v4l2rtspserver.sh to allow use of podman secrets in entrypoint
+        ExecStart=/bin/podman run \
+                      --name v4l2rtspserver \
+                      --secret v4l2rtspserver,type=env,target=SECRET \
+                      --secret v4l2rtspserver_camera3_url,type=env,target=URL \
+                      --device /dev/usbcam0:/dev/video0 \
+                      --device /dev/snd:/dev/snd \
+                      -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
+                      -p 8554:8554/tcp \
+                      -p 8554:8554/udp \
+                      --entrypoint "/bin/bash" \
+                      docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
+                      -c "/usr/local/bin/start_v4l2rtspserver.sh"
+        ExecStop=/bin/podman stop v4l2rtspserver
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: podman-update-images.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Auto update podman images
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        ExecStart=/bin/podman auto-update
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: podman-update-images.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Triggers podman-update-images.service to update podman images automatically
+        Requires=cleanup-motion-videos.service
+        After=network-online.target
+        Wants=network-online.target
+
+        [Timer]
+        Unit=podman-update-images.service
+        OnCalendar=*-*-* 00:00:00
+
+        [Install]
+        WantedBy=timers.target
+
+    - name: cleanup-motion-videos.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Delete motion video files older than 30 days
+        Wants=cleanup-motion-videos.timer
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        ExecStart=find /var/data/motion /var/data/motionplus -name "*.mkv" -type f -mtime +30 -delete
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: cleanup-motion-videos.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Triggers cleanup-motion-videos.service to delete videos older than 30 days
+        Requires=cleanup-motion-videos.service
+        After=network-online.target
+        Wants=network-online.target
+
+        [Timer]
+        Unit=cleanup-motion-videos.service
+        OnCalendar=*-*-* 00:00:00
+
+        [Install]
+        WantedBy=timers.target
+  
+    - name: git-server-init.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Initializes bare git repositories to serve as remote repositories
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        User=git
+        Group=git
+        WorkingDirectory=/var/data/git
+        Type=simple
+        ExecStart=/usr/local/bin/git-server-init.sh -d /var/data/git/obsidian.git
+
+        [Install]
+        WantedBy=multi-user.target
+
     - name: podman-secrets.service
       enabled: true
       contents: |
@@ -289,6 +261,39 @@ systemd:
         [Install]
         WantedBy=multi-user.target
       
+    - name: emby.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Emby Media Server
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        TimeoutStartSec=0
+        RestartSec=30
+        Restart=on-failure
+        ExecStartPre=-/bin/podman pull docker.io/linuxserver/emby:latest
+        ExecStartPre=-/bin/podman kill emby
+        ExecStartPre=-/bin/podman rm emby
+        ExecStart=/bin/podman run \
+                --name emby \
+                --device /dev/dri:/dev/dri \
+                -v emby_config:/config \
+                -v /var/data/emby/Movies:/mnt/Movies:Z \
+                -v /var/data/emby/TV:/mnt/TV:Z \
+                -v /var/data/emby/Mixed:/mnt/Mixed:Z \
+                -p 8096:8096 \
+                -e UID=1003 \
+                -e GID=1002 \
+                -e GIDLIST=100 \
+                docker.io/linuxserver/emby:latest
+        ExecStop=/bin/podman stop emby
+
+        [Install]
+        WantedBy=multi-user.target
+
     - name: plex.service
       enabled: false
       contents: |
@@ -341,161 +346,6 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
-
-    - name: emby.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Emby Media Server
-        After=network-online.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        TimeoutStartSec=0
-        RestartSec=30
-        Restart=on-failure
-        ExecStartPre=-/bin/podman pull docker.io/linuxserver/emby:latest
-        ExecStartPre=-/bin/podman kill emby
-        ExecStartPre=-/bin/podman rm emby
-        ExecStart=/bin/podman run \
-                --name emby \
-                --device /dev/dri:/dev/dri \
-                -v emby_config:/config \
-                -v /var/data/emby/Movies:/mnt/Movies:Z \
-                -v /var/data/emby/TV:/mnt/TV:Z \
-                -v /var/data/emby/Mixed:/mnt/Mixed:Z \
-                -p 8096:8096 \
-                -e UID=1003 \
-                -e GID=1002 \
-                -e GIDLIST=100 \
-                docker.io/linuxserver/emby:latest
-        ExecStop=/bin/podman stop emby
-
-        [Install]
-        WantedBy=multi-user.target
-    
-    # TODO troubleshoot motionplus and resolve netcam disconnecting problem
-    - name: motionplus.service
-      enabled: false
-      contents: |
-        [Unit]
-        Description=Motionplus Video Server
-        After=network-online.target
-        After=podman-secrets.service
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        TimeoutStartSec=0
-        RestartSec=30
-        Restart=on-failure
-        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
-
-        ExecStartPre=/bin/podman run --rm \
-            --rm \
-            --name motion-config-editor \
-            --pull newer \
-            --secret motion_camera1,type=env \
-            --secret motion_camera2,type=env \
-            --secret motion_camera3,type=env \
-            --secret v4l2rtspserver_camera1_url,type=env \
-            --secret v4l2rtspserver_camera2_url,type=env \
-            --secret v4l2rtspserver_camera3_url,type=env \
-            --device /dev/dri:/dev/dri \
-            -v /var/usrlocal/etc/motionplus:/mnt/motion:Z \
-            -v motionplus:/mnt/temp_config \
-            -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
-            docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
-
-        ExecStartPre=-/bin/podman kill motionplus
-        ExecStartPre=-/bin/podman rm motionplus
-        ExecStartPre=-/bin/podman pull docker.io/steve51516/motionplus:latest
-        ExecStart=/bin/podman run \
-            --name motionplus \
-            -e TZ="America/New_York" \
-            -v motionplus:/usr/local/etc/motionplus \
-            -v /var/data/motionplus:/var/lib/motionplus:Z \
-            -p 8080:8080 \
-            docker.io/steve51516/motionplus:latest
-        ExecStop=/bin/podman stop motionplus
-        ExecStopPost=/bin/podman volume rm motionplus
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: motion.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Motion Video Server
-        After=network-online.target
-        After=podman-secrets.service
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        TimeoutStartSec=0
-        RestartSec=30
-        Restart=on-failure
-        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
-
-        ExecStartPre=/bin/podman run --rm \
-            --name motion-config-editor \
-            --pull newer \
-            --secret motion_camera1,type=env \
-            --secret motion_camera2,type=env \
-            --secret motion_camera3,type=env \
-            --secret v4l2rtspserver_camera1_url,type=env \
-            --secret v4l2rtspserver_camera2_url,type=env \
-            --secret v4l2rtspserver_camera3_url,type=env \
-            --device /dev/dri:/dev/dri \
-            -v /var/usrlocal/etc/motion:/mnt/motion:Z \
-            -v motion_config:/mnt/temp_config \
-            -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
-            docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
-
-        ExecStartPre=-/bin/podman pull docker.io/motionproject/motion:latest
-        ExecStartPre=-/bin/podman kill motion
-        ExecStartPre=-/bin/podman rm motion
-        ExecStart=/bin/podman run \
-            --name motion \
-            -e TZ="America/New_York" \
-            -v motion_config:/usr/local/etc/motion \
-            -v /var/data/motion:/var/lib/motion:Z \
-            docker.io/motionproject/motion:latest
-        ExecStop=/bin/podman stop motion
-        ExecStopPost=/bin/podman volume rm motion_config
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: cleanup-motion-videos.service
-      enabled: false
-      contents: |
-        [Unit]
-        Wants=cleanup-motion-videos.timer
-
-        [Service]
-        Type=oneshot
-        ExecStart=find /var/data/motion -name "*.mkv" -type f -mtime +30 -delete
-
-        [Install]
-        WantedBy=multi-user.target
-    
-    - name: cleanup-motion-videos.timer
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Delete motion video files older than 30 days
-        Requires=cleanup-motion-videos.service
-
-        [Timer]
-        Unit=cleanup-motion-videos.service
-        OnCalendar=*-*-* 00:00:00
-
-        [Install]
-        WantedBy=timers.target
 
     - name: pihole.service
       enabled: false
@@ -559,43 +409,6 @@ systemd:
             --restart=unless-stopped \
             docker.io/mvance/unbound:latest
         
-        [Install]
-        WantedBy=multi-user.target
-  
-    - name: v4l2rtspserver.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=V4L2 RTSP Server
-        After=network.target
-        Wants=network-online.target
-        BindsTo=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
-        After=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
-        After=podman-secrets.service
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=-/bin/podman kill v4l2rtspserver
-        ExecStartPre=-/bin/podman rm v4l2rtspserver
-        ExecStartPre=-/bin/podman pull docker.io/mpromonet/v4l2rtspserver:latest-amd64
-
-        # Entrypoint is replaced with bash -c bin/start_v4l2rtspserver.sh to allow use of podman secrets in entrypoint
-        ExecStart=/bin/podman run \
-                      --name v4l2rtspserver \
-                      --secret v4l2rtspserver,type=env,target=SECRET \
-                      --secret v4l2rtspserver_camera3_url,type=env,target=URL \
-                      --device /dev/usbcam0:/dev/video0 \
-                      --device /dev/snd:/dev/snd \
-                      -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
-                      -p 8554:8554/tcp \
-                      -p 8554:8554/udp \
-                      --entrypoint "/bin/bash" \
-                      docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
-                      -c "/usr/local/bin/start_v4l2rtspserver.sh"
-        ExecStop=/bin/podman stop v4l2rtspserver
-
         [Install]
         WantedBy=multi-user.target
     
@@ -787,7 +600,7 @@ systemd:
         WantedBy=multi-user.target
     
     - name: gollum.service
-      enabled: true
+      enabled: false
       contents: |
         [Unit]
         After=network.target
@@ -852,3 +665,272 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
+
+storage:
+  disks:
+  - device: /dev/disk/by-id/coreos-boot-disk
+    wipe_table: false
+    partitions:
+    - number: 4
+      label: root
+      size_mib: 8192
+      resize: true
+    - size_mib: 0
+      label: containers
+  filesystems:
+    - path: /var/lib/containers
+      device: /dev/disk/by-partlabel/containers
+      format: btrfs
+      with_mount_unit: true
+
+  links:
+    - path: /var/data/motionplus
+      target: /var/data/motion
+
+    - path: /var/data/git
+      target: /var/home/git
+    
+    - path: /home/steven/motion
+      target: /var/data/motion
+
+  directories:
+    - path: /var/data
+      user:
+        name: root
+      group:
+        name: root
+      mode: 0755
+
+    - path: /var/data/motion
+      user: 
+        name: root
+      group: 
+        name: cctv
+
+    - path: /var/data/motion/frontdoor
+      user: 
+        name: root
+      group: 
+        name: cctv
+
+    - path: /var/data/motion/bedroom1
+      user: 
+        name: root
+      group: 
+        name: cctv
+
+    - path: /var/data/motion/driveway
+      user: 
+        name: root
+      group: 
+        name: cctv
+
+    - path: /var/data/emby
+      user:
+        name: root
+      group:
+        name: movies
+
+    - path: /var/data/plex
+      user:
+        name: root
+      group:
+        name: movies
+
+    - path: /var/data/emby/Movies
+      user:
+        name: root
+      group:
+        name: movies
+      mode: 0770
+
+    - path: /var/data/emby/TV
+      user:
+        name: root
+      group:
+        name: movies
+      mode: 0770
+
+    - path: /var/data/emby/Mixed
+      user:
+        name: root
+      group:
+        name: movies
+      mode: 0770
+
+    - path: /var/data/deja/r10
+      user:
+        name: steven
+      group:
+        name: steven
+      mode: 0700
+
+    - path: /var/data/deja/g15
+      user:
+        name: steven
+      group:
+        name: steven
+      mode: 0700
+
+  files:
+    - path: /usr/local/bin/git-server-init.sh
+      contents:
+        local: bin/git-server-init.sh
+      user:
+        name: git
+      group:
+        name: git
+      mode: 0540
+
+    # Needed for elasticsearch
+    - path: /etc/sysctl.d/99-vm_max_map.conf
+      mode: 0644
+      contents:
+        inline: |
+          vm.max_map_count=262144
+
+    - path: /etc/systemd/zram-generator.conf
+      mode: 0644
+      contents:
+        inline: |
+          # This config file enables a /dev/zram0 device with the default settings
+          [zram0]
+    
+    - path: /var/container_secrets.tar
+      overwrite: true
+      contents:
+        local: container_secrets.tar.gz
+        compression: gzip
+
+    # Used by podman-secrets.service
+    - path: /usr/local/bin/create_podman_secrets.sh
+      overwrite: true
+      mode: 0700
+      contents:
+        local: bin/create_podman_secrets.sh
+    
+    # Used by motion to copy secrets into temp config
+    - path: /usr/local/bin/motion_config_editor.sh
+      overwrite: true
+      mode: 0700
+      contents:
+        local: bin/motion_config_editor.sh
+    
+    # Used by v4l2rtspserver.servive
+    - path: /usr/local/bin/start_v4l2rtspserver.sh
+      overwrite: true
+      mode: 0700
+      contents:
+        local: bin/start_v4l2rtspserver.sh
+
+    # Ensure ELP usb camera is added for v4l2rtspserver
+    - path: /etc/udev/rules.d/99-usb-cam.rules
+      contents:
+        inline: |
+          KERNEL=="video0", SYMLINK="usbcam0", TAG+="systemd", ENV{SYSTEMD_WANTS}="v4l2rtspserver.service"
+    
+    - path: /etc/udev/rules.d/50-usb_power_save.rules
+      contents:
+        inline: |
+          # blacklist for usb autosuspend
+          ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="32e4", ATTR{idProduct}=="9310", GOTO="power_usb_rules_end"
+
+          ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{power/control}="auto"
+          LABEL="power_usb_rules_end"
+
+    - path: /etc/profile.d/zz-default-editor.sh
+      overwrite: true
+      contents:
+        inline: |
+          export EDITOR=vim
+
+    - path: /usr/local/etc/graylog/.env
+      mode: 0600
+      contents:
+        local: graylog/.env
+    
+    - path: /usr/local/bin/check_podman_network.sh
+      overwrite: true
+      mode: 0700
+      contents:
+        local: bin/check_podman_network.sh
+    
+    # Motion config files
+    - path: /usr/local/etc/motion/motionplus.conf
+      overwrite: true
+      contents:
+        local: motion/motionplus.conf
+      mode: 0644
+
+    - path: /usr/local/etc/motion/camera1.conf
+      overwrite: true
+      contents:
+        local: motion/camera1.conf
+      mode: 0644
+
+    - path: /usr/local/etc/motion/camera2.conf
+      overwrite: true
+      contents:
+        local: motion/camera2.conf
+      mode: 0644
+
+    - path: /usr/local/etc/motion/camera3.conf
+      overwrite: true
+      contents:
+        local: motion/camera3.conf
+      mode: 0644
+    
+    - path: /usr/local/etc/unbound/unbound.conf
+      overwrite: true
+      contents:
+        local: unbound/unbound.conf
+      mode: 0644
+    
+    # Beats config files
+    - path: /usr/local/etc/journalbeat.yml
+      overwrite: true
+      mode: 0644
+      contents:
+        local: beats/journalbeat.yml
+    
+    - path: /usr/local/etc/metricbeat.yml
+      overwrite: true
+      mode: 0644
+      contents:
+        local: beats/metricbeat.yml
+
+    # Openvpn config files
+    - path: /etc/openvpn/server/keys/ca.key
+      overwrite: true
+      mode: 0600
+      contents:
+        local: openvpn/keys/ca.key
+
+    - path: /etc/openvpn/server/keys/ca.crt
+      overwrite: true
+      mode: 0600
+      contents:
+        local: openvpn/keys/ca.crt
+
+    - path: /etc/openvpn/server/keys/kore.key
+      overwrite: true
+      mode: 0600
+      contents:
+        local: openvpn/keys/kore.key
+
+    - path: /etc/openvpn/server/keys/dh.pem
+      overwrite: true
+      mode: 0600
+      contents:
+        local: openvpn/keys/dh.pem
+
+    - path: /etc/openvpn/server/serverudp.conf
+      overwrite: true
+      mode: 0600
+      contents:
+        local: openvpn/server/serverudp.conf
+    
+    - path: /etc/openvpn/server/servertcp.conf
+      overwrite: true
+      contents:
+        local: openvpn/server/servertcp.conf

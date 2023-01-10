@@ -25,6 +25,8 @@ Deploy a self hosted Fedora CoreOS server to serve as
     * Provide endpoints for all web based applications via port 80/443
   * Gollum git backed wiki
     * Notes
+  * git server
+    * Used for obsidian git backing
 
 ### Files and Directories
 
@@ -52,19 +54,35 @@ Deploy a self hosted Fedora CoreOS server to serve as
     * These are loaded into the ignition, `create_podman_secrets.sh` runs on first boot creating the podman secrets
     * **All files in the archive must have the `.secret` file extension to be created**
     * Once the secrets are created all files are shredded
-1. `fedora_coreos/files/luks_keys/data.key`
+    * Example of archive contents:
+      * ```bash
+        [steven@r10 home-automation]$ tar tf fedora_coreos/files/container_secrets.tar.gz
+        container_secrets/
+        container_secrets/graylog.secret
+        container_secrets/graylog_root_password_sha2.secret
+        container_secrets/motion_camera1.secret
+        container_secrets/motion_camera2.secret
+        container_secrets/motion_camera3.secret
+        container_secrets/pihole.secret
+        container_secrets/plex.secret.secret
+        container_secrets/v4l2rtspserver.secret
+        container_secrets/v4l2rtspserver_camera1_url.secret
+        container_secrets/v4l2rtspserver_camera2_url.secret
+        container_secrets/v4l2rtspserver_camera3_url.secret
+        ```
+2. `fedora_coreos/files/luks_keys/data.key`
     * Required for encrypting `data` drive. Only configured in `kore_md_raid5.bu`.
     * Butane specification is unclear as to whether luks drives can be reused, it appears they cannot
     * Useful links
       *  [Red Hat Encrypting block devices using LUKS](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/security_hardening/encrypting-block-devices-using-luks_security-hardening)
       * [Red Hat Luks Guide](https://www.redhat.com/sysadmin/disk-encryption-luks)
-2. `fedora_coreos/files/graylog/.env`
+3. `fedora_coreos/files/graylog/.env`
    * Graylog `.env` configuration file
    * [Graylog Docker Documentation](https://go2docs.graylog.org/5-0/downloading_and_installing_graylog/docker_installation.htm)
-3. `fedora_coreos/files/openvpn/keys/`
+4. `fedora_coreos/files/openvpn/keys/`
     * files: `ca.crt,ca.key,dh.pem,kore.crt,kore.key`
     * openvpn files
-4. `fedora_coreos/isos`
+5. `fedora_coreos/isos`
     * ISO files created by `create_custom_iso.sh` are placed here
 
 ### How to use this repository
@@ -72,7 +90,12 @@ Deploy a self hosted Fedora CoreOS server to serve as
 1. Test in libvirt vm
     * Testing configuration in a libvirt vm
       ```bash
-      make start-libvirt
+      # Download the latest .qcow2 image
+      # If you aren't using the latest image, fcos will reboot and update shortly after booting
+      make libvirt-update
+      # Start the libvirt vm
+      # Open virt-manager and find the ip address of the VM above the log in prompt for ssh
+      make libvirt-start
       ```
 1. Deploy to bare metal with iso
     * Production bare metal iso creation
@@ -101,6 +124,62 @@ Deploy a self hosted Fedora CoreOS server to serve as
     * Server will boot once into the live installer image
     * Once the installer image has written to the destination device
     * Note: **REMOVE THE INSTALLATION MEDIA** to prevent an install loop
+
+### Modify git repositories
+
+1. See `git-server-init.sh` usage
+```bash
+[steven@r10 fedora_coreos]$ files/bin/git-server-init.sh -h
+USAGE:
+    ./files/bin/git-server-init.sh -d </var/git/repo1>
+
+ARGS:
+    -d          Comma seperate list of git repository directories
+    -h          This help message
+
+EXAMPLES:
+    ./files/bin/git-server-init.sh -d /var/git/repo1
+
+    Multiple repos can be passed with commas seperating directories
+
+    ./files/bin/git-server-init.sh -d /var/git/repo1,/var/git/repo2,/var/git/repo3
+```
+2. Modify `git-server-init` systemd unit file `ExecStart` line
+   1. Add more repositories to create and init
+```bash
+    - name: git-server-init.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Initializes bare git repositories to serve as remote repositories
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        User=git
+        Group=git
+        WorkingDirectory=/var/data/git
+        Type=simple
+        ExecStart=/usr/local/bin/git-server-init.sh -d /var/data/git/obsidian.git
+
+        [Install]
+        WantedBy=multi-user.target
+```
+3. How to use fresh repository
+```bash
+# Add remote origin
+git remote add origin git@kore:obsidian.git
+# Create empty commit
+git commit --allow-empty -m "Empty-Commit"
+# Push to remote repository on kore
+git push origin main
+```
+4. How to clone existing repository
+```bash
+git clone git@kore:obsidian.git
+cd obsidian
+git status
+```
 
 ### References
 

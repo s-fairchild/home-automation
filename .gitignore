@@ -1,12 +1,14 @@
 .vscode/
 *.secret
 *.tar.gz
-*.crt
-*.pem
-*.key
 *.ign
 *.iso
 *.iso.sig
 *.qcow2
 *~
 fedora_coreos/files/graylog/.env
+fedora_coreos/files/openvpn/keys/ca.key
+fedora_coreos/files/openvpn/keys/ca.crt
+fedora_coreos/files/openvpn/keys/kore.key
+fedora_coreos/files/openvpn/keys/kore.crt
+fedora_coreos/files/openvpn/keys/dh.pem
