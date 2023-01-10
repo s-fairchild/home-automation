@@ -9,4 +9,4 @@
 *.iso.sig
 *.qcow2
 *~
-fedora_coreos/files/graylog/*
+fedora_coreos/files/graylog/.env
