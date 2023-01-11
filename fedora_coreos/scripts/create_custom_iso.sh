@@ -9,14 +9,11 @@ main() {
         mkdir isos/ || abort "failed to create isos/ directory"
     fi
 
-<<<<<<< HEAD
     if [[ ${DOWNLOAD_ISO:-false} == "true" ]]; then
         download_latest_iso "${DOWNLOAD_LOCATION:-./}"
         exit 0
     fi
 
-=======
->>>>>>> 70a782e (Update README folder structure)
     ORIG_ISO="${ORIG_ISO:?ISO File must be provided with -i. Use ./${0} -h for usage information.}"
     DEST_DEVICE="${DEST_DEVICE:?Destination device must be provided with -d. Use ./${0} -h for usage information.}"
     NEW_ISO="isos/custom_$(date +%F)_${ORIG_ISO}"

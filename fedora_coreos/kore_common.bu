@@ -38,17 +38,19 @@ systemd:
         After=network-online.target
         After=podman-secrets.service
         Wants=network-online.target
+        RequiresMountsFor=%t/containers
 
         [Service]
-        Type=simple
-        TimeoutStartSec=0
+        Type=notify
+        NotifyAccess=all
         RestartSec=30
+        TimeoutStopSec=70
         Restart=on-failure
-        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
+        Environment=PODMAN_SYSTEMD_UNIT=%n
 
         # Create a volume with motionplus configuration with placeholder values replaced with podman secrets
         ExecStartPre=/bin/podman run --rm \
-            --rm \
+            --pull missing \
             --name motion-config-editor \
             --secret motion_camera1,type=env \
             --secret motion_camera2,type=env \
@@ -62,63 +64,31 @@ systemd:
             -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
             docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
 
-        ExecStartPre=-/bin/podman kill motionplus
-        ExecStartPre=if podman container exists motionplus; then podman rm motionplus; fi
-        ExecStartPre=-/bin/podman pull docker.io/steve51516/motionplus:latest
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
             --name motionplus \
+            --replace \
+            --rm \
+            -d \
+            --label "io.containers.autoupdate=registry" \
+            --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --sdnotify=conmon \
+            --pull missing \
             -e TZ="America/New_York" \
             -v motionplus:/usr/local/etc/motionplus \
             -v /var/data/motionplus:/var/lib/motionplus:Z \
             -p 8080:8080 \
             docker.io/steve51516/motionplus:latest
-        ExecStop=/bin/podman stop motionplus
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
         ExecStopPost=/bin/podman volume rm motionplus
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: motion.service
-      enabled: false
-      contents: |
-        [Unit]
-        Description=Motion Video Server
-        After=network-online.target
-        After=podman-secrets.service
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        TimeoutStartSec=0
-        RestartSec=30
-        Restart=on-failure
-        ExecStartPre=-/bin/podman pull docker.io/bash:5.2.2
-
-        ExecStartPre=/bin/podman run --rm \
-            --name motion-config-editor \
-            --secret motion_camera1,type=env \
-            --secret motion_camera2,type=env \
-            --secret motion_camera3,type=env \
-            --secret v4l2rtspserver_camera1_url,type=env \
-            --secret v4l2rtspserver_camera2_url,type=env \
-            --secret v4l2rtspserver_camera3_url,type=env \
-            --device /dev/dri:/dev/dri \
-            -v /var/usrlocal/etc/motion:/mnt/motion:Z \
-            -v motion_config:/mnt/temp_config \
-            -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
-            docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
-
-        ExecStartPre=-/bin/podman pull docker.io/motionproject/motion:latest
-        ExecStartPre=-/bin/podman kill motion
-        ExecStartPre=-/bin/podman rm motion
-        ExecStart=/bin/podman run \
-            --name motion \
-            -e TZ="America/New_York" \
-            -v motion_config:/usr/local/etc/motion \
-            -v /var/data/motion:/var/lib/motion:Z \
-            docker.io/motionproject/motion:latest
-        ExecStop=/bin/podman stop motion
-        ExecStopPost=/bin/podman volume rm motion_config
 
         [Install]
         WantedBy=multi-user.target
@@ -133,63 +103,593 @@ systemd:
         BindsTo=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
         After=sys-devices-pci0000:00-0000:00:14.0-usb1-1\x2d2-1\x2d2.3-1\x2d2.3:1.0-video4linux-video0.device
         After=podman-secrets.service
+        RequiresMountsFor=%t/containers
 
         [Service]
-        Type=simple
-        Restart=on-failure
+        Type=notify
+        NotifyAccess=all
         RestartSec=30
-        ExecStartPre=-/bin/podman kill v4l2rtspserver
-        ExecStartPre=-/bin/podman rm v4l2rtspserver
-        ExecStartPre=-/bin/podman pull docker.io/mpromonet/v4l2rtspserver:latest-amd64
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
 
         # Entrypoint is replaced with bash -c bin/start_v4l2rtspserver.sh to allow use of podman secrets in entrypoint
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
-                      --name v4l2rtspserver \
-                      --secret v4l2rtspserver,type=env,target=SECRET \
-                      --secret v4l2rtspserver_camera3_url,type=env,target=URL \
-                      --device /dev/usbcam0:/dev/video0 \
-                      --device /dev/snd:/dev/snd \
-                      -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
-                      -p 8554:8554/tcp \
-                      -p 8554:8554/udp \
-                      --entrypoint "/bin/bash" \
-                      docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
-                      -c "/usr/local/bin/start_v4l2rtspserver.sh"
-        ExecStop=/bin/podman stop v4l2rtspserver
+            --name v4l2rtspserver \
+            --label "io.containers.autoupdate=registry" \
+            --pull missing \
+            --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --secret v4l2rtspserver,type=env,target=SECRET \
+            --secret v4l2rtspserver_camera3_url,type=env,target=URL \
+            --device /dev/usbcam0:/dev/video0 \
+            --device /dev/snd:/dev/snd \
+            -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
+            -p 8554:8554/tcp \
+            -p 8554:8554/udp \
+            --entrypoint "/bin/bash" \
+            docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
+                -c "/usr/local/bin/start_v4l2rtspserver.sh"
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
 
         [Install]
         WantedBy=multi-user.target
     
-    - name: podman-update-images.service
-      enabled: false
-      contents: |
-        [Unit]
-        Description=Auto update podman images
-        After=network-online.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        ExecStart=/bin/podman auto-update
-
-        [Install]
-        WantedBy=multi-user.target
-    
-    - name: podman-update-images.timer
+    - name: emby.service
       enabled: true
       contents: |
         [Unit]
-        Description=Triggers podman-update-images.service to update podman images automatically
-        Requires=cleanup-motion-videos.service
+        Description=Emby Media Server
         After=network-online.target
         Wants=network-online.target
+        RequiresMountsFor=%t/containers
 
-        [Timer]
-        Unit=podman-update-images.service
-        OnCalendar=*-*-* 00:00:00
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name emby \
+            --label "io.containers.autoupdate=registry" \
+            --pull missing \
+            --device /dev/dri:/dev/dri \
+            -v emby_config:/config \
+            -v /var/data/emby/Movies:/mnt/Movies:Z \
+            -v /var/data/emby/TV:/mnt/TV:Z \
+            -v /var/data/emby/Mixed:/mnt/Mixed:Z \
+            -p 8096:8096 \
+            -e UID=1003 \
+            -e GID=1002 \
+            -e GIDLIST=100 \
+            docker.io/linuxserver/emby:latest
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
 
         [Install]
-        WantedBy=timers.target
+        WantedBy=multi-user.target
+
+    - name: plex.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Plex Media Server
+        After=network-online.target
+        After=podman-secrets.service
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        # https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/
+        # https://hub.docker.com/r/linuxserver/plex
+        # https://hub.docker.com/r/plexinc/pms-docker/
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name plex \
+            --label "io.containers.autoupdate=registry" \
+            --pull missing \
+            --secret plex \
+            --device /dev/dri:/dev/dri \
+            -e PUID=1000 \
+            -e PGID=1000 \
+            -p 32400:32400/tcp \
+            -e TZ="America/New_York" \
+            -e FILE__PASSWORD=/run/secrets/plex \
+            -e VERSION=docker \
+            -h plex.kore \
+            -v plex_config:/config \
+            --mount type=tmpfs,tmpfs-size=1G,destination=/transcode \
+            -v /var/data/plex:/data \
+            docker.io/linuxserver/plex:latest
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: pihole.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Pihole DNS Server
+        After=network-online.target
+        After=podman-secrets.service
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+            # TODO script password creation volume similar to motion
+            # --secret pihole,target=ADMIN_PASSWORD \
+            # -e WEBPASSWORD="${ADMIN_PASSWORD}" \
+
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name pihole \
+            --label "io.containers.autoupdate=registry" \
+            --pull missing \
+            -e TZ="America/New_York" \
+            -v pihole-etc:/etc/pihole \
+            -v pihole-dnsmasq.d:/etc/dnsmasq.d \
+            -v pihole-log:/var/log \
+            --dns 127.0.0.1 \
+            --dns 1.1.1.1 \
+            --hostname pi.hole \
+            -e VIRTUAL_HOST=pi.hole \
+            -e PROXY_LOCATION=pi.hole \
+            -e ServerIP=10.50.0.1 \
+            -p 53:53/udp \
+            -p 53:53/tcp \
+            -p 8080:80 \
+            docker.io/pihole/pihole:latest
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # Used as upstream dns for pihole
+    - name: unbound.service
+      enabled: false
+      contents: |
+        [Unit]        
+        Description=Unbound DNS Server
+        After=network.target
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name unbound \
+            --label "io.containers.autoupdate=registry" \
+            --pull missing \
+            -p 5353:53/tcp \
+            -p 5353:53/udp \
+            --restart=unless-stopped \
+            docker.io/mvance/unbound:latest
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        
+        [Install]
+        WantedBy=multi-user.target
+    
+    # TODO finish nginx reverse proxy setup
+    - name: nginx.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Nginx Reverse Proxy Server
+        After=network.target
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStart=podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name nginx \
+            --pull missing \
+            --label "io.containers.autoupdate=registry" \
+            -p 8080:80 \
+            -p 443:443 \
+            registry.access.redhat.com/ubi9/nginx-120:1-75
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: graylog.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Wants=network-online.target
+        After=mongodb.service
+        After=elasticsearch.service
+        After=podman-secrets.service
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name graylog \
+            --pull missing \
+            --secret graylog,type=env,target=GRAYLOG_PASSWORD_SECRET \
+            --secret graylog_root_password_sha2,type=env,target=GRAYLOG_ROOT_PASSWORD_SHA2 \
+            -e "GRAYLOG_NODE_ID_FILE=/usr/share/graylog/data/config/node-id" \
+            -e "GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000" \
+            -e "GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/" \
+            -e "GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200" \
+            -e "GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog" \
+            -v graylog_data:/usr/share/graylog/data \
+            -v "graylog_journal:/usr/share/graylog/data/journal" \
+            --net graylog \
+            --network-alias "graylog" \
+            -p 9000:9000 \
+            -p 1514:1514 \
+            -p 1514:1514/udp \
+            -p 12201:12201 \
+            -p 12201:12201/udp \
+            -p 5044:5044/tcp \
+            -p 5140:5140/udp \
+            -p 5140:5140/tcp \
+            -p 13301:13301/tcp \
+            -p 5555:5555/tcp \
+            -p 5555:5555/udp \
+            -p 13302:13302/tcp \
+            --entrypoint '["/usr/bin/tini", "--", "wait-for-it", "elasticsearch:9200", "--", "/docker-entrypoint.sh"]' \
+            docker.io/graylog/graylog:4.3
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: mongodb.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Before=graylog.service
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name mongo \
+            --pull missing \
+            -v graylog_mongo_data:/data/db \
+            --net graylog \
+            --network-alias mongodb \
+            docker.io/mongo:5.0
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: elasticsearch.service
+      enabled: true
+      contents: |
+        [Unit]
+        After=network.target
+        Before=graylog.service
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name elasticsearch \
+            --pull missing \
+            -e http.host=0.0.0.0 \
+            -e transport.host=localhost \
+            -e network.host=0.0.0.0 \
+            -e ES_JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xms2048m -Xmx2048m" \
+            -v graylog_es_data:/usr/share/elasticsearch/ \
+            --net graylog \
+            --network-alias elasticsearch \
+            -p 9200:9200 \
+            --ulimit memlock=-1:-1 \
+            -m 4g \
+            docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: metricbeat.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Metricbeat metric elastic beats shipper
+        After=network.target
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name metricbeat \
+            --pull missing \
+            -v /usr/local/etc/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
+            -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
+            -v /proc:/hostfs/proc:ro \
+            -v /:/hostfs:ro \
+            --net=host \
+            --cap-add sys_ptrace \
+            --cap-add dac_read_search \
+            docker.elastic.co/beats/metricbeat-oss:7.10.2 \
+            -e -system.hostfs=/hostfs
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: journalbeat.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Journal beat elastic beats journal shipper
+        After=network.target
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name=journalbeat \
+            --pull missing \
+            -v /usr/local/etc/journalbeat.yml:/usr/share/journalbeat/journalbeat.yml:ro \
+            -v /var/log/journal:/var/log/journal:ro \
+            -v /etc/machine-id:/etc/machine-id:ro \
+            -v /run/systemd:/run/systemd:ro \
+            -v /etc/hostname:/etc/hostname:ro \
+            docker.elastic.co/beats/journalbeat-oss:7.10.2 \
+            journalbeat -e -strict.perms=false
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
+    
+    - name: gollum.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Gollum Git Wiki
+        After=network.target
+        Wants=network-online.target
+        RequiresMountsFor=%t/containers
+
+        [Service]
+        Type=notify
+        NotifyAccess=all
+        RestartSec=30
+        TimeoutStopSec=70
+        Restart=on-failure
+        Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStart=/bin/podman run \
+        	  --cidfile=%t/%n.ctr-id \
+            --cgroups=no-conmon \
+            --rm \
+            --sdnotify=conmon \
+            -d \
+            --replace \
+            --name gollum \
+            --label "io.containers.autoupdate=registry" \
+            --pull missing \
+            -u root \
+            -e GOLLUM_AUTHOR_USERNAME=s-fairchild \
+            -e GOLLUM_AUTHOR_EMAIL=steve51516@gmail.com \
+            -p 4567:4567 \
+            -v gollumwiki:/wiki \
+            docker.io/gollumwiki/gollum:master \
+                --mathjax \
+                --mermaid \
+                --emoji \
+                --user-icons \
+                --default-keybinding vim \
+                --allow-uploads page
+        ExecStop=/usr/bin/podman stop \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+        ExecStopPost=/usr/bin/podman rm \
+            -f \
+            --ignore -t 10 \
+            --cidfile=%t/%n.ctr-id
+
+        [Install]
+        WantedBy=multi-user.target
 
     - name: cleanup-motion-videos.service
       enabled: false
@@ -223,6 +723,7 @@ systemd:
         [Install]
         WantedBy=timers.target
   
+    # Init services. Runs one time on first boot.
     - name: git-server-init.service
       enabled: true
       contents: |
@@ -261,376 +762,8 @@ systemd:
         [Install]
         WantedBy=multi-user.target
       
-    - name: emby.service
+    - name: podman-auto-update.timer
       enabled: true
-      contents: |
-        [Unit]
-        Description=Emby Media Server
-        After=network-online.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        TimeoutStartSec=0
-        RestartSec=30
-        Restart=on-failure
-        ExecStartPre=-/bin/podman pull docker.io/linuxserver/emby:latest
-        ExecStartPre=-/bin/podman kill emby
-        ExecStartPre=-/bin/podman rm emby
-        ExecStart=/bin/podman run \
-                --name emby \
-                --device /dev/dri:/dev/dri \
-                -v emby_config:/config \
-                -v /var/data/emby/Movies:/mnt/Movies:Z \
-                -v /var/data/emby/TV:/mnt/TV:Z \
-                -v /var/data/emby/Mixed:/mnt/Mixed:Z \
-                -p 8096:8096 \
-                -e UID=1003 \
-                -e GID=1002 \
-                -e GIDLIST=100 \
-                docker.io/linuxserver/emby:latest
-        ExecStop=/bin/podman stop emby
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: plex.service
-      enabled: false
-      contents: |
-        [Unit]
-        Description=Plex Media Server
-        After=network-online.target
-        After=podman-secrets.service
-        Wants=network-online.target
-
-        # https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/
-        # https://hub.docker.com/r/linuxserver/plex
-        # https://hub.docker.com/r/plexinc/pms-docker/
-        [Service]
-        Type=simple
-        TimeoutStartSec=0
-        RestartSec=30
-        Restart=on-failure
-        ExecStartPre=-/bin/podman pull docker.io/linuxserver/plex:latest
-        ExecStartPre=-/bin/podman kill plex
-        ExecStartPre=-/bin/podman rm plex
-          # Optional ports, read linked docs for usage
-          # -p 32400:32400 \
-          # -p 1900:1900/udp \
-          # -p 3005:3005 \
-          # -p 5353:5353/udp \
-          # -p 8324:8324 \
-          # -p 32410:32410/udp \
-          # -p 32412:32412/udp \
-          # -p 32413:32413/udp \
-          # -p 32414:32414/udp \
-          # -p 32469:32469
-                # --device /dev/dri:/dev/dri \
-                # -e PLEX_CLAIM="<claimToken>" \
-        ExecStart=/bin/podman run \
-                --name plex \
-                --secret plex \
-                --device /dev/dri:/dev/dri \
-                -e PUID=1000 \
-                -e PGID=1000 \
-                -p 32400:32400/tcp \
-                -e TZ="America/New_York" \
-                -e FILE__PASSWORD=/run/secrets/plex \
-                -e VERSION=docker \
-                -h plex.kore \
-                -v plex_config:/config \
-                --mount type=tmpfs,tmpfs-size=1G,destination=/transcode \
-                -v /var/data/plex:/data \
-                docker.io/linuxserver/plex:latest
-        ExecStop=/bin/podman stop plex
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: pihole.service
-      enabled: false
-      contents: |
-        [Unit]
-        Description=Pihole DNS Server
-        After=network-online.target
-        After=podman-secrets.service
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        TimeoutStartSec=0
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=-/bin/podman pull docker.io/pihole/pihole:latest
-        ExecStartPre=-/bin/podman kill pihole
-        ExecStartPre=-/bin/podman rm pihole
-            # TODO script password creation volume similar to motion
-            # --secret pihole,target=ADMIN_PASSWORD \
-            # -e WEBPASSWORD="${ADMIN_PASSWORD}" \
-        ExecStart=/bin/podman run \
-            --name pihole \
-            -e TZ="America/New_York" \
-            -v pihole-etc:/etc/pihole \
-            -v pihole-dnsmasq.d:/etc/dnsmasq.d \
-            -v pihole-log:/var/log \
-            --dns 127.0.0.1 \
-            --dns 1.1.1.1 \
-            --hostname pi.hole \
-            -e VIRTUAL_HOST=pi.hole \
-            -e PROXY_LOCATION=pi.hole \
-            -e ServerIP=10.50.0.1 \
-            -p 53:53/udp \
-            -p 53:53/tcp \
-            -p 8080:80 \
-            docker.io/pihole/pihole:latest
-        ExecStop=/bin/podman stop pihole
-
-        [Install]
-        WantedBy=multi-user.target
-
-    # Used as upstream dns for pihole
-    - name: unbound.service
-      enabled: false
-      contents: |
-        [Unit]        
-        Description=Unbound DNS Server
-        After=network.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStart=/bin/podman run \
-            --name unbound \
-            --pull newer \
-            -p 5353:53/tcp \
-            -p 5353:53/udp \
-            --restart=unless-stopped \
-            docker.io/mvance/unbound:latest
-        
-        [Install]
-        WantedBy=multi-user.target
-    
-    # TODO finish nginx reverse proxy setup
-    - name: nginx.service
-      enabled: false
-      contents: |
-        [Unit]
-        After=network.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=-/bin/podman kill nginx
-        ExecStartPre=-/bin/podman rm nginx
-        ExecStart=podman run \
-                      --pull newer \
-                      -p 8080:80 \
-                      -p 443:443 \
-                      registry.access.redhat.com/ubi9/nginx-120:1-75
-
-        [Install]
-        WantedBy=multi-user.target
-    
-    - name: graylog.service
-      enabled: true
-      contents: |
-        [Unit]
-        After=network.target
-        Wants=network-online.target
-        After=mongodb.service
-        After=elasticsearch.service
-        After=podman-secrets.service
-
-        [Service]
-        Type=simple
-        Restart=always
-        RestartSec=30
-        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
-        ExecStartPre=-/bin/podman pull docker.io/graylog/graylog:4.3
-        ExecStartPre=-/bin/podman kill graylog
-        ExecStartPre=-/bin/podman rm graylog
-
-        ExecStart=/bin/podman run --name=graylog \
-                                  --secret graylog,type=env,target=GRAYLOG_PASSWORD_SECRET \
-                                  --secret graylog_root_password_sha2,type=env,target=GRAYLOG_ROOT_PASSWORD_SHA2 \
-                                  -e "GRAYLOG_NODE_ID_FILE=/usr/share/graylog/data/config/node-id" \
-                                  -e "GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000" \
-                                  -e "GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/" \
-                                  -e "GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200" \
-                                  -e "GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog" \
-                                  -v graylog_data:/usr/share/graylog/data \
-                                  -v "graylog_journal:/usr/share/graylog/data/journal" \
-                                  --net graylog \
-                                  --network-alias "graylog" \
-                                  -p 9000:9000 \
-                                  -p 1514:1514 \
-                                  -p 1514:1514/udp \
-                                  -p 12201:12201 \
-                                  -p 12201:12201/udp \
-                                  -p 5044:5044/tcp \
-                                  -p 5140:5140/udp \
-                                  -p 5140:5140/tcp \
-                                  -p 13301:13301/tcp \
-                                  -p 5555:5555/tcp \
-                                  -p 5555:5555/udp \
-                                  -p 13302:13302/tcp \
-                                  --entrypoint '["/usr/bin/tini", "--", "wait-for-it", "elasticsearch:9200", "--", "/docker-entrypoint.sh"]' \
-                                  docker.io/graylog/graylog:4.3
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: mongodb.service
-      enabled: true
-      contents: |
-        [Unit]
-        After=network.target
-        Before=graylog.service
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
-        ExecStartPre=-/bin/podman pull docker.io/mongo:5.0
-        ExecStartPre=-/bin/podman kill mongo
-        ExecStartPre=-/bin/podman rm mongo
-
-        ExecStart=/bin/podman run --name=mongo \
-                                  -v graylog_mongo_data:/data/db \
-                                  --net graylog \
-                                  --network-alias mongodb \
-                                  docker.io/mongo:5.0
-
-        [Install]
-        WantedBy=multi-user.target
-    
-    - name: elasticsearch.service
-      enabled: true
-      contents: |
-        [Unit]
-        After=network.target
-        Before=graylog.service
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
-        ExecStartPre=-/bin/podman pull docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
-        ExecStartPre=-/bin/podman kill elasticsearch
-        ExecStartPre=-/bin/podman rm elasticsearch
-
-        ExecStart=/bin/podman run --name=elasticsearch \
-                                  -e http.host=0.0.0.0 \
-                                  -e transport.host=localhost \
-                                  -e network.host=0.0.0.0 \
-                                  -e ES_JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xms2048m -Xmx2048m" \
-                                  -v graylog_es_data:/usr/share/elasticsearch/ \
-                                  --net graylog \
-                                  --network-alias elasticsearch \
-                                  -p 9200:9200 \
-                                  --ulimit memlock=-1:-1 \
-                                  -m 4g \
-                                  docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: metricbeat.service
-      enabled: false
-      contents: |
-        [Unit]
-        After=network.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=-/bin/podman kill metricbeat
-        ExecStartPre=-/bin/podman rm metricbeat
-        ExecStart=/bin/podman run --name metricbeat \
-                          --pull newer \
-                          -v /usr/local/etc/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro \
-                          -v /var/run/docker.sock:/var/run/docker.sock:ro \
-                          -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
-                          -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
-                          -v /proc:/hostfs/proc:ro \
-                          -v /:/hostfs:ro \
-                          --net=host \
-                          --cap-add sys_ptrace \
-                          --cap-add dac_read_search \
-                          docker.elastic.co/beats/metricbeat-oss:7.10.2 \
-                          -e -system.hostfs=/hostfs
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: journalbeat.service
-      enabled: true
-      contents: |
-        [Unit]
-        After=network.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=-/bin/podman kill journalbeat
-        ExecStartPre=-/bin/podman rm journalbeat
-        ExecStart=/bin/podman run --name=journalbeat \
-                          --pull newer \
-                          -v /usr/local/etc/journalbeat.yml:/usr/share/journalbeat/journalbeat.yml:ro \
-                          -v /var/log/journal:/var/log/journal:ro \
-                          -v /etc/machine-id:/etc/machine-id:ro \
-                          -v /run/systemd:/run/systemd:ro \
-                          -v /etc/hostname:/etc/hostname:ro \
-                          docker.elastic.co/beats/journalbeat-oss:7.10.2 \
-                          journalbeat -e -strict.perms=false
-
-        [Install]
-        WantedBy=multi-user.target
-    
-    - name: gollum.service
-      enabled: false
-      contents: |
-        [Unit]
-        After=network.target
-        Wants=network-online.target
-
-        [Service]
-        Type=simple
-        Restart=on-failure
-        RestartSec=30
-        ExecStartPre=-/bin/podman kill gollum
-        ExecStartPre=-/bin/podman rm gollum
-        ExecStartPre=-/bin/podman pull docker.io/gollumwiki/gollum:master
-        ExecStart=/bin/podman run \
-                              --name gollum \
-                              -u root \
-                              -e GOLLUM_AUTHOR_USERNAME=s-fairchild \
-                              -e GOLLUM_AUTHOR_EMAIL=steve51516@gmail.com \
-                              -p 4567:4567 \
-                              -v gollumwiki:/wiki \
-                              docker.io/gollumwiki/gollum:master \
-                                  --mathjax \
-                                  --mermaid \
-                                  --emoji \
-                                  --user-icons \
-                                  --default-keybinding vim \
-                                  --allow-uploads page
-
-        [Install]
-        WantedBy=multi-user.target
-
     - name: openvpn-server@serverudp.service
       enabled: true
     - name: openvpn-server@servertcp.service
@@ -660,7 +793,7 @@ systemd:
         Restart=on-failure
         RestartSec=60
         ExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \
-            vim htop screen iotop openvpn # podman-compose
+            vim htop screen iotop openvpn
         ExecStart=/bin/touch /var/lib/%N.stamp
 
         [Install]
