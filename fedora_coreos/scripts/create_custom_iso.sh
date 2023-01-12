@@ -9,14 +9,11 @@ main() {
         mkdir isos/ || abort "failed to create isos/ directory"
     fi
 
-<<<<<<< HEAD
     if [[ ${DOWNLOAD_ISO:-false} == "true" ]]; then
         download_latest_iso "${DOWNLOAD_LOCATION:-./}"
         exit 0
     fi
 
-=======
->>>>>>> 70a782e (Update README folder structure)
     ORIG_ISO="${ORIG_ISO:?ISO File must be provided with -i. Use ./${0} -h for usage information.}"
     DEST_DEVICE="${DEST_DEVICE:?Destination device must be provided with -d. Use ./${0} -h for usage information.}"
     NEW_ISO="isos/custom_$(date +%F)_${ORIG_ISO}"
@@ -24,20 +21,20 @@ main() {
     IGNITION="files/ignitions/kore_production.ign"
     for f in "isos/$ORIG_ISO" "$IGNITION"; do
         if [[ ! -f $f ]]; then
-            abort "${f} not found."
+            abort "${f} not found"
         fi
     done
 
     echo "Generating new bare metal ignition file"
     if [[ ! -f $IGNITION ]]; then
-        abort "$IGNITION not found."
+        abort "$IGNITION not found"
     fi
 
     check_remove_iso
 
     if create_new_iso; then
         echo -e "\nCreated new iso image: ${NEW_ISO}"
-        echo -e "\nWrite image to installation media with:\n\tsudo dd if=${NEW_ISO} of=/dev/sdX status=progress bs=1M\n"
+        echo -e "\nWrite image to installation media with:\n\tsudo dd if=${NEW_ISO} of=/dev/sdX status=progress bs=1M && sync\n"
         echo -e "Note: replace /dev/sdX with the name of your drive\n"
     fi
 }

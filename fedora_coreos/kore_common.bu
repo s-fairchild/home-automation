@@ -64,22 +64,26 @@ systemd:
             -v /var/usrlocal/bin/motion_config_editor.sh:/bin/motion_config_editor.sh:Z \
             docker.io/bash:5.2.2 bash /bin/motion_config_editor.sh
 
+        ExecStartPre=/usr/local/bin/check_podman_network.sh cameras
         ExecStartPre=/bin/rm \
             -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
-            --name motionplus \
-            --replace \
-            --rm \
-            -d \
-            --label "io.containers.autoupdate=registry" \
             --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
+            --rm \
             --sdnotify=conmon \
+            -d \
+            --replace \
+            --label "io.containers.autoupdate=registry" \
+            --name motionplus \
+            --net cameras \
+            --network-alias cameras \
             --pull missing \
             -e TZ="America/New_York" \
             -v motionplus:/usr/local/etc/motionplus \
             -v /var/data/motionplus:/var/lib/motionplus:Z \
             -p 8080:8080 \
+            --device /dev/dri:/dev/dri \
             docker.io/steve51516/motionplus:latest
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
@@ -93,6 +97,7 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
+    # Entrypoint is replaced with bash -c bin/start_v4l2rtspserver.sh to allow use of podman secrets in entrypoint
     - name: v4l2rtspserver.service
       enabled: true
       contents: |
@@ -113,23 +118,26 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
-        # Entrypoint is replaced with bash -c bin/start_v4l2rtspserver.sh to allow use of podman secrets in entrypoint
+        ExecStartPre=/usr/local/bin/check_podman_network.sh cameras
         ExecStartPre=/bin/rm \
             -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
-            --name v4l2rtspserver \
-            --label "io.containers.autoupdate=registry" \
-            --pull missing \
             --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
             --rm \
             --sdnotify=conmon \
             -d \
             --replace \
+            --label "io.containers.autoupdate=registry" \
+            --name v4l2rtspserver \
+            --net cameras \
+            --network-alias cameras \
+            --pull missing \
             --secret v4l2rtspserver,type=env,target=SECRET \
             --secret v4l2rtspserver_camera3_url,type=env,target=URL \
             --device /dev/usbcam0:/dev/video0 \
             --device /dev/snd:/dev/snd \
+            --device /dev/dri:/dev/dri \
             -v /var/usrlocal/bin/start_v4l2rtspserver.sh:/usr/local/bin/start_v4l2rtspserver.sh \
             -p 8554:8554/tcp \
             -p 8554:8554/udp \
@@ -806,7 +814,7 @@ storage:
     partitions:
     - number: 4
       label: root
-      size_mib: 8192
+      size_mib: 30720
       resize: true
     - size_mib: 0
       label: containers
@@ -817,11 +825,11 @@ storage:
       with_mount_unit: true
 
   links:
-    - path: /var/data/motionplus
-      target: /var/data/motion
+    # - path: /var/data/motionplus
+    #   target: /var/data/motion
 
-    - path: /var/data/git
-      target: /var/home/git
+    # - path: /var/data/git
+    #   target: /var/home/git
     
     - path: /home/steven/motion
       target: /var/data/motion
