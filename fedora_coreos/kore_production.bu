@@ -13,6 +13,22 @@ storage:
       partitions:
       - number: 4
         label: root
+storage:
+  disks:
+  - device: /dev/disk/by-id/coreos-boot-disk
+    wipe_table: false
+    partitions:
+    - number: 4
+      label: root
+      size_mib: 30720
+      resize: true
+    - size_mib: 0
+      label: containers
+  filesystems:
+    - path: /var/lib/containers
+      device: /dev/disk/by-partlabel/containers
+      format: btrfs
+      with_mount_unit: true
 
   filesystems:
     - device: /dev/disk/by-partlabel/root
