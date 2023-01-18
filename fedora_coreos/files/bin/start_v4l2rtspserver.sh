@@ -8,5 +8,4 @@
     -S1 \
     -R home -U user:"${SECRET}" \
     -C1 -A48000 -aS16_LE \
-    -u "${URL}" \
-    /dev/video0,hw:CARD=Camera,DEV=0
+    -u "${URL}" ${@} # optional input should be video/alsa devices
