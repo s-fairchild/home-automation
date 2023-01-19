@@ -31,6 +31,12 @@ passwd:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILKn4SiC50J4Yre5jcFdLvXH1VaNoW1ko5ng8nT/ZxAA steven@rh-thinkpad-p1
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILPKVaSQZMv4JXoV66CP2jBaoanPBwiO2NOYwFdgqmVV steven@G15
+    - name: plex
+      uid: 900
+      gecos: "Plex Media Server Service Account"
+      system: true
+      groups:
+        - movies
 systemd:
   units:
     - name: motionplus.service
@@ -101,8 +107,11 @@ systemd:
         Wants=network-online.target
         After=podman-secrets.service
         RequiresMountsFor=%t/containers
-        BindsTo=dev-video0.device
-        After=dev-video0.device
+        # BindsTo=dev-video0.device
+        # After=dev-video0.device
+        BindsTo=dev-v4l-by\x2did-usb\x2dHD_Camera_Manufacturer_HD_USB_Camera_2020101401\x2dvideo\x2dindex0.device
+        After=dev-v4l-by\x2did-usb\x2dHD_Camera_Manufacturer_HD_USB_Camera_2020101401\x2dvideo\x2dindex0.device
+
 
         [Service]
         Type=notify
@@ -125,7 +134,7 @@ systemd:
             --label "io.containers.autoupdate=registry" \
             --name v4l2rtspserver \
             --net cameras \
-            --network-alias cameras \
+            --network-alias camera3 \
             --pull missing \
             --secret v4l2rtspserver,type=env,target=SECRET \
             --secret v4l2rtspserver_camera3_url,type=env,target=URL \
@@ -180,9 +189,9 @@ systemd:
             --pull missing \
             --device /dev/dri:/dev/dri \
             -v emby_config:/config \
-            -v /var/data/emby/Movies:/mnt/Movies:Z \
-            -v /var/data/emby/TV:/mnt/TV:Z \
-            -v /var/data/emby/Mixed:/mnt/Mixed:Z \
+            -v /var/data/emby/Movies:/mnt/Movies:Z,U \
+            -v /var/data/emby/TV:/mnt/TV:Z,U \
+            -v /var/data/emby/Mixed:/mnt/Mixed:Z,U \
             -p 8096:8096 \
             -e UID=1003 \
             -e GID=1002 \
@@ -200,7 +209,7 @@ systemd:
         WantedBy=multi-user.target
 
     - name: plex.service
-      enabled: false
+      enabled: true
       contents: |
         [Unit]
         Description=Plex Media Server
@@ -219,6 +228,9 @@ systemd:
         TimeoutStopSec=70
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
+
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -231,17 +243,21 @@ systemd:
             --pull missing \
             --secret plex \
             --device /dev/dri:/dev/dri \
-            -e PUID=1000 \
-            -e PGID=1000 \
             -p 32400:32400/tcp \
+            -e PUID=900 \
+            -e PGID=900 \
             -e TZ="America/New_York" \
             -e FILE__PASSWORD=/run/secrets/plex \
-            -e VERSION=docker \
+            -e VERSION="docker" \
+            -e ALLOWED_NETWORKS="10.50.0.0/24,192.168.1.0/24" \
+            -e ADVERTISE_IP="http://10.50.0.2:32400" \
+            -e PLEX_CLAIM="<claimToken>" \
             -h plex.kore \
             -v plex_config:/config \
-            --mount type=tmpfs,tmpfs-size=1G,destination=/transcode \
-            -v /var/data/plex:/data \
+            --mount type=tmpfs,tmpfs-size=2G,destination=/transcode \
+            -v /var/data/plex/Mixed:/data/Mixed \
             docker.io/linuxserver/plex:latest
+            # docker.io/plexinc/pms-docker
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -275,6 +291,8 @@ systemd:
             # --secret pihole,target=ADMIN_PASSWORD \
             # -e WEBPASSWORD="${ADMIN_PASSWORD}" \
 
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -328,6 +346,8 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -371,6 +391,8 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -415,6 +437,8 @@ systemd:
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
         ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -423,12 +447,13 @@ systemd:
             -d \
             --replace \
             --name graylog \
+            --label "io.containers.autoupdate=registry" \
             --pull missing \
             --secret graylog,type=env,target=GRAYLOG_PASSWORD_SECRET \
             --secret graylog_root_password_sha2,type=env,target=GRAYLOG_ROOT_PASSWORD_SHA2 \
             -e "GRAYLOG_NODE_ID_FILE=/usr/share/graylog/data/config/node-id" \
             -e "GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000" \
-            -e "GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/" \
+            -e "GRAYLOG_HTTP_EXTERNAL_URI=http://0.0.0.0:9000/" \
             -e "GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200" \
             -e "GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog" \
             -v graylog_data:/usr/share/graylog/data \
@@ -478,6 +503,8 @@ systemd:
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
         ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -520,6 +547,8 @@ systemd:
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
         ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -552,7 +581,7 @@ systemd:
         WantedBy=multi-user.target
 
     - name: metricbeat.service
-      enabled: false
+      enabled: true
       contents: |
         [Unit]
         Description=Metricbeat metric elastic beats shipper
@@ -568,6 +597,8 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -578,16 +609,16 @@ systemd:
             --name metricbeat \
             --pull missing \
             -v /usr/local/etc/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro \
-            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            -v /run/podman/podman.sock:/var/run/docker.sock:ro \
             -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
             -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
             -v /proc:/hostfs/proc:ro \
             -v /:/hostfs:ro \
             --net=host \
-            --cap-add sys_ptrace \
-            --cap-add dac_read_search \
+            --cap-add SYS_PTRACE \
+            --cap-add DAC_READ_SEARCH \
             docker.elastic.co/beats/metricbeat-oss:7.10.2 \
-            -e -system.hostfs=/hostfs
+                -e -system.hostfs=/hostfs
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -616,6 +647,8 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -660,6 +693,8 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
+        ExecStartPre=/bin/rm \
+            -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -872,30 +907,37 @@ storage:
 
     - path: /var/data/plex
       user:
-        name: root
+        name: plex
       group:
         name: movies
+
+    - path: /var/data/plex/Mixed
+      user:
+        name: plex
+      group:
+        name: movies
+      mode: 0755
 
     - path: /var/data/emby/Movies
       user:
         name: root
       group:
         name: movies
-      mode: 0770
+      mode: 0755
 
     - path: /var/data/emby/TV
       user:
         name: root
       group:
         name: movies
-      mode: 0770
+      mode: 0755
 
     - path: /var/data/emby/Mixed
       user:
         name: root
       group:
         name: movies
-      mode: 0770
+      mode: 0755
 
     - path: /var/data/deja/r10
       user:
