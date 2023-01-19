@@ -198,3 +198,5 @@ git status
     EXAMPLES:
         ./scripts/create_custom_iso.sh -i isos/fedora-coreos-37.20221106.3.0-live.x86_64.iso -d /dev/nvme0n1
     ```
+1. Broadcom LSI Firmware
+   - [Broadcom flashing guide](https://www.broadcom.com/support/knowledgebase/1211161501344/flashing-firmware-and-bios-on-lsi-sas-hbas)
