@@ -859,6 +859,18 @@ storage:
 
     - path: /home/steven/motionplus
       target: /var/data/motionplus
+    
+    - path: /usr/local/bin/MegaCli
+      target: /usr/local/bin/megacli
+    
+    - path: /usr/local/bin/MegaCli
+      target: /usr/local/bin/megacli
+    
+    - path: /usr/local/bin/storcli64
+      target: /usr/local/bin/storcli
+    
+    - path: /usr/local/bin/StorCli64
+      target: /usr/local/bin/storcli
 
   directories:
     - path: /var/data
@@ -954,6 +966,53 @@ storage:
       mode: 0700
 
   files:
+    - path: /usr/local/bin/megacli
+      contents:
+        inline: |
+          #!/bin/bash
+          #
+          # MegaCLI in podman container
+
+          podman_args="--name megacli --rm --privileged --pull missing"
+          megacli_args="megacli ${@}"
+
+          # Run in interactive mode for helper script usage
+          if [[ -z "${@}" ]]; then
+              podman_args+=" -it"
+              megacli_args=""
+          fi
+
+          podman run \
+              ${podman_args} \
+              docker.io/kamermans/docker-megacli \
+                  ${megacli_args}
+    
+    - path: /usr/local/bin/storcli
+      contents:
+        inline: |
+          #!/bin/bash
+          #
+          # StoreCLI64 in podman container
+
+          podman_args="--name megacli --rm --privileged"
+          storecli_args="/opt/MegaRAID/storcli/storcli64 ${@}"
+
+          # Run in interactive mode for helper script usage
+          if [[ -z "${@}" ]]; then
+              echo "No arguements provided, entering interactive shell"
+              echo -e "Run one of those helper scripts located in ./\n"
+              podman_args+=" -it"
+              storecli_args=""
+          fi
+
+          podman_args="--name megacli --rm --privileged"
+          # Run in interactive mode for helper script usage
+          if [[ -z "${@}" ]]; then
+              podman_args+=" -it"
+          fi
+
+          podman run ${podman_args} docker.io/kamermans/docker-megacli ${storecli_args}
+
     - path: /usr/local/bin/git-server-init.sh
       contents:
         local: bin/git-server-init.sh
