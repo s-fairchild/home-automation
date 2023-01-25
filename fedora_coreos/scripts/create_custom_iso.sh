@@ -34,7 +34,7 @@ main() {
 
     if create_new_iso; then
         echo -e "\nCreated new iso image: ${NEW_ISO}"
-        echo -e "\nWrite image to installation media with:\n\tsudo dd if=${NEW_ISO} of=/dev/sdX status=progress bs=1M && sync\n"
+        echo -e "\nWrite image to installation media with:\n\tsudo dd if=${NEW_ISO} of=/dev/sdX status=progress bs=1M && sudo sync\n"
         echo -e "Note: replace /dev/sdX with the name of your drive\n"
     fi
 }

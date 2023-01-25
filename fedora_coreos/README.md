@@ -104,21 +104,73 @@ Deploy a self hosted Fedora CoreOS server to serve as
       podman run --security-opt label=disable --pull=always --rm -v .:/data -w /data \
         quay.io/coreos/coreos-installer:release download -s stable -p metal -f iso
 
+      # OR Use provided shell script
+      ./scripts/create_custom_iso.sh -g
+      Downloading Fedora CoreOS stable x86_64 metal image (iso) and signature
+      Read disk 19.9 MiB/733.0 MiB (2%)
+      Read disk 39.6 MiB/733.0 MiB (5%)
+      Read disk 60.5 MiB/733.0 MiB (8%)
+      Read disk 80.8 MiB/733.0 MiB (11%)
+      Read disk 101.3 MiB/733.0 MiB (13%)
+      Read disk 121.5 MiB/733.0 MiB (16%)
+      Read disk 142.1 MiB/733.0 MiB (19%)
+      Read disk 162.6 MiB/733.0 MiB (22%)
+      Read disk 183.8 MiB/733.0 MiB (25%)
+      Read disk 204.2 MiB/733.0 MiB (27%)
+      Read disk 220.7 MiB/733.0 MiB (30%)
+      Read disk 241.1 MiB/733.0 MiB (32%)
+      Read disk 260.9 MiB/733.0 MiB (35%)
+      Read disk 281.4 MiB/733.0 MiB (38%)
+      Read disk 301.7 MiB/733.0 MiB (41%)
+      Read disk 322.9 MiB/733.0 MiB (44%)
+      Read disk 342.1 MiB/733.0 MiB (46%)
+      Read disk 362.3 MiB/733.0 MiB (49%)
+      Read disk 382.7 MiB/733.0 MiB (52%)
+      Read disk 403.0 MiB/733.0 MiB (54%)
+      Read disk 419.2 MiB/733.0 MiB (57%)
+      Read disk 440.5 MiB/733.0 MiB (60%)
+      Read disk 461.8 MiB/733.0 MiB (63%)
+      Read disk 483.3 MiB/733.0 MiB (65%)
+      Read disk 504.8 MiB/733.0 MiB (68%)
+      Read disk 521.9 MiB/733.0 MiB (71%)
+      Read disk 543.0 MiB/733.0 MiB (74%)
+      Read disk 564.1 MiB/733.0 MiB (76%)
+      Read disk 584.4 MiB/733.0 MiB (79%)
+      Read disk 605.2 MiB/733.0 MiB (82%)
+      Read disk 625.6 MiB/733.0 MiB (85%)
+      Read disk 641.6 MiB/733.0 MiB (87%)
+      Read disk 662.7 MiB/733.0 MiB (90%)
+      Read disk 683.2 MiB/733.0 MiB (93%)
+      Read disk 703.0 MiB/733.0 MiB (95%)
+      Read disk 724.1 MiB/733.0 MiB (98%)
+      Read disk 733.0 MiB/733.0 MiB (100%)
+      Read disk 733.0 MiB/733.0 MiB (100%)
+      gpg: Signature made Mon Jan  9 20:14:02 2023 UTC
+      gpg:                using RSA key ACB5EE4E831C74BB7C168D27F55AD3FB5323552A
+      gpg: checking the trustdb
+      gpg: marginals needed: 3  completes needed: 1  trust model: pgp
+      gpg: depth: 0  valid:   4  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 4u
+      gpg: Good signature from "Fedora (37) <fedora-37-primary@fedoraproject.org>" [ultimate]
+      ./fedora-coreos-37.20221225.3.0-live.x86_64.iso
+
       # Move downloaded iso file to isos/
       # Example filename, your's will be a newer version
-      mv ./fedora-coreos-37.20221106.3.0-live.x86_64.iso isos/fedora-coreos-37.20221106.3.0-live.x86_64.iso
+      mv ./fedora-coreos-37.20221225.3.0-live.x86_64.iso isos/
+
+      # This generates a new ignition file and creates a new iso file from the default
+      ./scripts/create_custom_iso.sh -i isos/fedora-coreos-37.20221225.3.0-live.x86_64.iso -d /dev/nvme0n1
+
+      # A new created custom ISO file should exist with custom_date_ prefixed
+      ls -l isos/custom_2023-01-25_fedora-coreos-37.20221225.3.0-live.x86_64.iso
 
       # Wipe destination USB drive
       wipefs -a /dev/sdX
 
-      # This generates a new ignition file and creates a new iso file from the default
-      ./scripts/create_custom_iso.sh -i isos/fedora-coreos-37.20221106.3.0-live.x86_64.iso -d /dev/nvme0n1
-
-      # A new created custom ISO file should exist with custom_date_ prefixed
-      ls -l isos/custom_2023-01-04_fedora-coreos-37.20221106.3.0-live.x86_64.iso
-
       # Write the image to your installation media previously wiped
-      sudo dd if=isos/custom_2023-01-04_fedora-coreos-37.20221106.3.0-live.x86_64.iso of=/dev/sdc status=progress bs=1M
+      sudo dd if=isos/custom_2023-01-25_fedora-coreos-37.20221225.3.0-live.x86_64.iso of=/dev/sdc status=progress bs=1M
+
+      # Sync block devices
+      sudo sync
       ```
 1. Insert installation media into bare metal server and boot to it
     * Server will boot once into the live installer image

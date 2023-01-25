@@ -37,6 +37,12 @@ passwd:
       system: true
       groups:
         - movies
+    - name: jellyfin
+      uid: 901
+      gecos: "Jellyfin Media Server Service Account"
+      system: true
+      groups:
+        - movies
 systemd:
   units:
     - name: motionplus.service
@@ -68,7 +74,7 @@ systemd:
             -d \
             --replace \
             --label "io.containers.autoupdate=registry" \
-            --name motionplus \
+            --name %N \
             --init \
             --init-path /var/usrlocal/bin/motion_config_editor.sh \
             --secret motion_camera1,type=env \
@@ -107,10 +113,10 @@ systemd:
         Wants=network-online.target
         After=podman-secrets.service
         RequiresMountsFor=%t/containers
-        # BindsTo=dev-video0.device
-        # After=dev-video0.device
-        BindsTo=dev-v4l-by\x2did-usb\x2dHD_Camera_Manufacturer_HD_USB_Camera_2020101401\x2dvideo\x2dindex0.device
-        After=dev-v4l-by\x2did-usb\x2dHD_Camera_Manufacturer_HD_USB_Camera_2020101401\x2dvideo\x2dindex0.device
+        BindsTo=dev-video0.device
+        After=dev-video0.device
+        # BindsTo=dev-v4l-by\x2did-usb\x2dHD_Camera_Manufacturer_HD_USB_Camera_2020101401\x2dvideo\x2dindex0.device
+        # After=dev-v4l-by\x2did-usb\x2dHD_Camera_Manufacturer_HD_USB_Camera_2020101401\x2dvideo\x2dindex0.device
 
         [Service]
         Type=notify
@@ -126,12 +132,12 @@ systemd:
         ExecStart=/bin/podman run \
             --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
-            --rm \
             --sdnotify=conmon \
+            --rm \
             -d \
             --replace \
             --label "io.containers.autoupdate=registry" \
-            --name v4l2rtspserver \
+            --name %N \
             --net cameras \
             --network-alias camera3 \
             --pull missing \
@@ -146,6 +152,7 @@ systemd:
             --entrypoint "/bin/bash" \
             docker.io/mpromonet/v4l2rtspserver:latest-amd64 \
                 -c "/usr/local/bin/start_v4l2rtspserver.sh /dev/video0,default:CARD=Camera"
+
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -157,69 +164,16 @@ systemd:
         [Install]
         WantedBy=multi-user.target
     
-    - name: emby.service
+    - name: jellyfin.service
       enabled: true
       contents: |
         [Unit]
-        Description=Emby Media Server
-        After=network-online.target
-        Wants=network-online.target
-        RequiresMountsFor=%t/containers
-
-        [Service]
-        Type=notify
-        NotifyAccess=all
-        RestartSec=30
-        TimeoutStopSec=70
-        Restart=on-failure
-        Environment=PODMAN_SYSTEMD_UNIT=%n
-
-        ExecStartPre=/bin/rm \
-            -f %t/%n.ctr-id
-        ExecStart=/bin/podman run \
-        	  --cidfile=%t/%n.ctr-id \
-            --cgroups=no-conmon \
-            --rm \
-            --sdnotify=conmon \
-            -d \
-            --replace \
-            --name emby \
-            --label "io.containers.autoupdate=registry" \
-            --pull missing \
-            --device /dev/dri:/dev/dri \
-            -v emby_config:/config \
-            -v /var/data/emby/Movies:/mnt/Movies:Z,U \
-            -v /var/data/emby/TV:/mnt/TV:Z,U \
-            -v /var/data/emby/Mixed:/mnt/Mixed:Z,U \
-            -p 8096:8096 \
-            -e UID=1003 \
-            -e GID=1002 \
-            -e GIDLIST=100 \
-            docker.io/linuxserver/emby:latest
-        ExecStop=/usr/bin/podman stop \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-        ExecStopPost=/usr/bin/podman rm \
-            -f \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: plex.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Plex Media Server
+        Description=jellyfin Media Server
         After=network-online.target
         After=podman-secrets.service
         Wants=network-online.target
         RequiresMountsFor=%t/containers
 
-        # https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/
-        # https://hub.docker.com/r/linuxserver/plex
-        # https://hub.docker.com/r/plexinc/pms-docker/
         [Service]
         Type=notify
         NotifyAccess=all
@@ -230,33 +184,25 @@ systemd:
 
         ExecStartPre=/bin/rm \
             -f %t/%n.ctr-id
+        # https://jellyfin.org/docs/general/installation/container#podman
         ExecStart=/bin/podman run \
-        	  --cidfile=%t/%n.ctr-id \
+            --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
-            --rm \
             --sdnotify=conmon \
             -d \
+            --rm \
             --replace \
-            --name plex \
+            --name %N \
             --label "io.containers.autoupdate=registry" \
-            --pull missing \
-            --secret plex \
+            -p 8096:8096/tcp \
+            -p 8920:8920/tcp \
+            -e JELLYFIN_PublishedServerUrl="http://10.50.0.2:8096" \
             --device /dev/dri:/dev/dri \
-            -p 32400:32400/tcp \
-            -e PUID=900 \
-            -e PGID=900 \
-            -e TZ="America/New_York" \
-            -e FILE__PASSWORD=/run/secrets/plex \
-            -e VERSION="docker" \
-            -e ALLOWED_NETWORKS="10.50.0.0/24,192.168.1.0/24" \
-            -e ADVERTISE_IP="http://10.50.0.2:32400" \
-            -e PLEX_CLAIM="<claimToken>" \
-            -h plex.kore \
-            -v plex_config:/config \
-            --mount type=tmpfs,tmpfs-size=2G,destination=/transcode \
-            -v /var/data/plex/Mixed:/data/Mixed:Z,U \
-            docker.io/linuxserver/plex:latest
-            # docker.io/plexinc/pms-docker
+            -v jellyfin-config:/config:Z \
+            --mount type=tmpfs,tmpfs-size=512M,destination=/cache,U=true \
+            -v /var/data/jellyfin:/media:Z,U \
+                docker.io/jellyfin/jellyfin:latest
+
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -299,7 +245,7 @@ systemd:
             --sdnotify=conmon \
             -d \
             --replace \
-            --name pihole \
+            --name %N \
             --label "io.containers.autoupdate=registry" \
             --pull missing \
             -e TZ="America/New_York" \
@@ -354,7 +300,7 @@ systemd:
             --sdnotify=conmon \
             -d \
             --replace \
-            --name unbound \
+            --name %N \
             --label "io.containers.autoupdate=registry" \
             --pull missing \
             -p 5353:53/tcp \
@@ -445,7 +391,8 @@ systemd:
             --sdnotify=conmon \
             -d \
             --replace \
-            --name graylog \
+            --rm \
+            --name %N \
             --label "io.containers.autoupdate=registry" \
             --pull missing \
             --secret graylog,type=env,target=GRAYLOG_PASSWORD_SECRET \
@@ -511,7 +458,7 @@ systemd:
             --sdnotify=conmon \
             -d \
             --replace \
-            --name mongo \
+            --name %N \
             --pull missing \
             -v graylog_mongo_data:/data/db \
             --net graylog \
@@ -555,7 +502,7 @@ systemd:
             --sdnotify=conmon \
             -d \
             --replace \
-            --name elasticsearch \
+            --name %N \
             --pull missing \
             -e http.host=0.0.0.0 \
             -e transport.host=localhost \
@@ -605,9 +552,9 @@ systemd:
             --sdnotify=conmon \
             -d \
             --replace \
-            --name metricbeat \
+            --name %N \
             --pull missing \
-            -v /usr/local/etc/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro \
+            -v /usr/local/etc/%N.yml:/usr/share/%N/%N.yml:ro \
             -v /run/podman/podman.sock:/var/run/docker.sock:ro \
             -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
             -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
@@ -616,7 +563,7 @@ systemd:
             --net=host \
             --cap-add SYS_PTRACE \
             --cap-add DAC_READ_SEARCH \
-            docker.elastic.co/beats/metricbeat-oss:7.10.2 \
+            docker.elastic.co/beats/%N-oss:7.10.2 \
                 -e -system.hostfs=/hostfs
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
@@ -655,15 +602,15 @@ systemd:
             --sdnotify=conmon \
             -d \
             --replace \
-            --name=journalbeat \
+            --name %N \
             --pull missing \
-            -v /usr/local/etc/journalbeat.yml:/usr/share/journalbeat/journalbeat.yml:ro \
+            -v /usr/local/etc/%N.yml:/usr/share/%N/%N.yml:ro \
             -v /var/log/journal:/var/log/journal:ro \
             -v /etc/machine-id:/etc/machine-id:ro \
             -v /run/systemd:/run/systemd:ro \
             -v /etc/hostname:/etc/hostname:ro \
-            docker.elastic.co/beats/journalbeat-oss:7.10.2 \
-            journalbeat -e -strict.perms=false
+            docker.elastic.co/beats/%N-oss:7.10.2 \
+                journalbeat -e -strict.perms=false
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -697,11 +644,11 @@ systemd:
         ExecStart=/bin/podman run \
         	  --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
-            --rm \
             --sdnotify=conmon \
             -d \
+            --rm \
             --replace \
-            --name gollum \
+            --name %N \
             --label "io.containers.autoupdate=registry" \
             --pull missing \
             -u root \
@@ -743,6 +690,41 @@ systemd:
         [Install]
         WantedBy=multi-user.target
     
+    - name: jellyfin-uploads.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Delete motion video files older than 30 days
+        Wants=cleanup-motion-videos.timer
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=simple
+        ExecStart=find /var/data/jellyfin/uploads/ -name "*.mp4" -type f -exec mv -t /var/data/jellyfin/Mixed/ {} +
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: jellyfin-uploads.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Triggers cleanup-motion-videos.service to delete videos older than 30 days
+        Requires=cleanup-motion-videos.service
+        After=network-online.target
+        Wants=network-online.target
+
+        [Timer]
+        Unit=jellyfin-uploads.service
+        OnUnitActiveSec=15min
+        OnBootSec=10min
+        OnUnitActiveSec=15min
+        OnCalendar=*:0/15
+
+        [Install]
+        WantedBy=timers.target
+    
     - name: cleanup-motion-videos.timer
       enabled: true
       contents: |
@@ -753,6 +735,8 @@ systemd:
         Wants=network-online.target
 
         [Timer]
+        OnBootSec=30min
+        OnUnitActiveSec=15min
         Unit=cleanup-motion-videos.service
         OnCalendar=*-*-* 00:00:00
 
@@ -898,40 +882,33 @@ storage:
       group: 
         name: cctv
 
-    - path: /var/data/emby
+    - path: /var/data/jellyfin
       user:
         name: root
       group:
         name: movies
 
-    - path: /var/data/plex
+    - path: /var/data/jellyfin/uploads
       user:
-        name: plex
+        name: steven
       group:
         name: movies
 
-    - path: /var/data/plex/Mixed
-      user:
-        name: plex
-      group:
-        name: movies
-      mode: 0755
-
-    - path: /var/data/emby/Movies
+    - path: /var/data/jellyfin/Movies
       user:
         name: root
       group:
         name: movies
       mode: 0755
 
-    - path: /var/data/emby/TV
+    - path: /var/data/jellyfin/TV
       user:
         name: root
       group:
         name: movies
       mode: 0755
 
-    - path: /var/data/emby/Mixed
+    - path: /var/data/jellyfin/Mixed
       user:
         name: root
       group:
