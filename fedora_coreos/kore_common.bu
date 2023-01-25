@@ -361,17 +361,15 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
-    
-    - name: graylog.service
+
+    - name: kibana.service
       enabled: true
       contents: |
         [Unit]
         After=network.target
         Wants=network-online.target
-        After=mongodb.service
+        RequiresMountsFor=%t/containers
         After=elasticsearch.service
-        After=podman-secrets.service
-        RequiresMountsFor=%t/containers
 
         [Service]
         Type=notify
@@ -381,45 +379,39 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
-        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=/usr/local/bin/check_podman_network.sh elastic
         ExecStartPre=/bin/rm \
             -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
-        	  --cidfile=%t/%n.ctr-id \
+            --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
-            --rm \
             --sdnotify=conmon \
+            --rm \
             -d \
             --replace \
-            --rm \
             --name %N \
-            --label "io.containers.autoupdate=registry" \
             --pull missing \
-            --secret graylog,type=env,target=GRAYLOG_PASSWORD_SECRET \
-            --secret graylog_root_password_sha2,type=env,target=GRAYLOG_ROOT_PASSWORD_SHA2 \
-            -e "GRAYLOG_NODE_ID_FILE=/usr/share/graylog/data/config/node-id" \
-            -e "GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000" \
-            -e "GRAYLOG_HTTP_EXTERNAL_URI=http://0.0.0.0:9000/" \
-            -e "GRAYLOG_ELASTICSEARCH_HOSTS=http://elasticsearch:9200" \
-            -e "GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog" \
-            -v graylog_data:/usr/share/graylog/data \
-            -v "graylog_journal:/usr/share/graylog/data/journal" \
-            --net graylog \
-            --network-alias "graylog" \
-            -p 9000:9000 \
-            -p 1514:1514 \
-            -p 1514:1514/udp \
-            -p 12201:12201 \
-            -p 12201:12201/udp \
-            -p 5044:5044/tcp \
-            -p 5140:5140/udp \
-            -p 5140:5140/tcp \
-            -p 13301:13301/tcp \
-            -p 5555:5555/tcp \
-            -p 5555:5555/udp \
-            -p 13302:13302/tcp \
-            --entrypoint '["/usr/bin/tini", "--", "wait-for-it", "elasticsearch:9200", "--", "/docker-entrypoint.sh"]' \
-            docker.io/graylog/graylog:4.3
+            --secret kibana_password,type=env,target=ELASTIC_PASSWORD \
+            --secret kibana_xpack_saved_objects_key,type=env,target=XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY \
+            --secret kibana_xpack_reporting_key,type=env,target=XPACK_REPORTING_ENCRYPTIONKEY \
+            --secret kibana_xpack_security_key,type=env,target=XPACK_SECURITY_ENCRYPTIONKEY \
+            --secret es_token,type=env,target=ENROLLMENT_TOKEN \
+            -e MONITORING_CLUSTER_ALERTS_EMAIL_NOTIFICATIONS_EMAIL_ADDRESS="example@example.com" \
+            -e SERVER_NAME="0.0.0.0" \
+            -e XPACK_REPORTING_KIBANASERVER_HOSTNAME="localhost" \
+            -e SERVER_PUBLICBASEURL="http://kore:5601" \
+            -e ELASTICSEARCH_HOSTS="https://es01:9200" \
+            -e ELASTICSEARCH_USERNAME=kibana_system \
+            -e SERVER_NAME="kibana.kore" \
+            -e TZ="America/New_York" \
+            -h kibana.kore \
+            --net elastic \
+            --network-alias kibana \
+            -m 2g \
+            -p 5601:5601 \
+            -v /var/data/elastic/kibana:/usr/share/kibana/data:Z,U \
+            -v kibana_config:/usr/share/kibana/config:Z,U \
+            docker.elastic.co/kibana/kibana:8.6.0-amd64
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -431,50 +423,6 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
-    - name: mongodb.service
-      enabled: true
-      contents: |
-        [Unit]
-        After=network.target
-        Before=graylog.service
-        Wants=network-online.target
-        RequiresMountsFor=%t/containers
-
-        [Service]
-        Type=notify
-        NotifyAccess=all
-        RestartSec=30
-        TimeoutStopSec=70
-        Restart=on-failure
-        Environment=PODMAN_SYSTEMD_UNIT=%n
-
-        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
-        ExecStartPre=/bin/rm \
-            -f %t/%n.ctr-id
-        ExecStart=/bin/podman run \
-        	  --cidfile=%t/%n.ctr-id \
-            --cgroups=no-conmon \
-            --rm \
-            --sdnotify=conmon \
-            -d \
-            --replace \
-            --name %N \
-            --pull missing \
-            -v graylog_mongo_data:/data/db \
-            --net graylog \
-            --network-alias mongodb \
-            docker.io/mongo:5.0
-        ExecStop=/usr/bin/podman stop \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-        ExecStopPost=/usr/bin/podman rm \
-            -f \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-
-        [Install]
-        WantedBy=multi-user.target
-    
     - name: elasticsearch.service
       enabled: true
       contents: |
@@ -492,7 +440,7 @@ systemd:
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
 
-        ExecStartPre=/usr/local/bin/check_podman_network.sh graylog
+        ExecStartPre=/usr/local/bin/check_podman_network.sh elastic
         ExecStartPre=/bin/rm \
             -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
@@ -504,17 +452,26 @@ systemd:
             --replace \
             --name %N \
             --pull missing \
+            -h es01.kore \
+            --secret elastic_password,type=env,target=ELASTIC_PASSWORD \
+            -v /var/data/elastic/elasticsearch:/usr/share/elasticsearch/data:Z,U \
+            -v es_config:/usr/share/elasticsearch/config \
+            --net elastic \
+            --network-alias es01 \
+            -p 9200:9200 \
+            --ulimit memlock=-1:-1 \
+            -m 3g \
+            -e TZ="America/New_York" \
             -e http.host=0.0.0.0 \
             -e transport.host=localhost \
             -e network.host=0.0.0.0 \
-            -e ES_JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Xms2048m -Xmx2048m" \
-            -v graylog_es_data:/usr/share/elasticsearch/ \
-            --net graylog \
-            --network-alias elasticsearch \
-            -p 9200:9200 \
-            --ulimit memlock=-1:-1 \
-            -m 4g \
-            docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+            -e ES_JAVA_OPTS="-Xms1g -Xmx1g" \
+            -e "discovery.type=single-node" \
+            -e "bootstrap.memory_lock=true" \
+            -e "cluster.name=podman-cluster" \
+            -e network.host="0.0.0.0"
+            docker.elastic.co/elasticsearch/elasticsearch:8.6.0-amd64
+
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -850,6 +807,9 @@ storage:
       group:
         name: root
       mode: 0755
+  
+    - path: /var/data/elastic/kibana
+    - path: /var/data/elastic/elasticsearch
 
     - path: /var/data/git
       user:
@@ -928,8 +888,19 @@ storage:
       group:
         name: steven
       mode: 0700
+    
+    - path: /usr/local/etc/elastic
 
   files:
+    - path: /usr/local/etc/elastic/elasticsearch.yml
+      contents:
+        local: elastic/elasticsearch.yml
+
+    - path: /usr/local/bin/init_kibana.sh 
+      contents:
+        local: bin/init_kibana.sh
+      mode: 0755
+
     - path: /usr/local/bin/git-server-init.sh
       contents:
         local: bin/git-server-init.sh
@@ -939,7 +910,7 @@ storage:
         name: git
       mode: 0540
 
-    # Needed for elasticsearch
+    # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#_linux
     - path: /etc/sysctl.d/99-vm_max_map.conf
       mode: 0644
       contents:
