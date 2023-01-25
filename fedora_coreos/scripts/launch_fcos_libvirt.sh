@@ -14,10 +14,10 @@ main() {
     latest_img="$(get_latest_image "$IMG_PATH")"
     IMAGE="${BACKING_STORAGE:-$latest_img}"
     
-    # VM resources
+    # TODO calculate these based on system resources
     VM_NAME="fcos-test-01"
     VCPUS="4"
-    RAM_MB="4096"
+    RAM_MB="10240"
     STREAM="stable"
     DISK_GB="20"
 

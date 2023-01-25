@@ -382,6 +382,7 @@ systemd:
         ExecStartPre=/usr/local/bin/check_podman_network.sh elastic
         ExecStartPre=/bin/rm \
             -f %t/%n.ctr-id
+            # --secret es_token,type=env,target=ENROLLMENT_TOKEN \
         ExecStart=/bin/podman run \
             --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
@@ -395,11 +396,10 @@ systemd:
             --secret kibana_xpack_saved_objects_key,type=env,target=XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY \
             --secret kibana_xpack_reporting_key,type=env,target=XPACK_REPORTING_ENCRYPTIONKEY \
             --secret kibana_xpack_security_key,type=env,target=XPACK_SECURITY_ENCRYPTIONKEY \
-            --secret es_token,type=env,target=ENROLLMENT_TOKEN \
-            -e XPACK_REPORTING_ROLES_ENABLED="true" \
+            -e XPACK_REPORTING_ROLES_ENABLED="false" \
             -e MONITORING_CLUSTER_ALERTS_EMAIL_NOTIFICATIONS_EMAIL_ADDRESS="example@example.com" \
             -e SERVER_NAME="0.0.0.0" \
-            -e XPACK_REPORTING_KIBANASERVER_HOSTNAME="0.0.0.0" \
+            -e XPACK_REPORTING_KIBANASERVER_HOSTNAME="es01" \
             -e SERVER_PUBLICBASEURL="http://0.0.0.0:5601" \
             -e ELASTICSEARCH_HOSTS="https://es01:9200" \
             -e ELASTICSEARCH_USERNAME=kibana_system \
@@ -471,8 +471,6 @@ systemd:
             -e CLUSTER_NAME="podman-cluster" \
             -e NETWORK_HOST="0.0.0.0" \
             -e HTTP_HOST="0.0.0.0" \
-            -e XPACK_SECURITY_ENROLLMENT_ENABLED="true" \
-            -e XPACK_SECURITY_TRANSPORT_SSL_ENABLED="true" \
             docker.elastic.co/elasticsearch/elasticsearch:8.6.0-amd64
 
         ExecStop=/usr/bin/podman stop \
