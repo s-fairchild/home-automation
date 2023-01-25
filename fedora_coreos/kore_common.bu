@@ -391,19 +391,19 @@ systemd:
             --replace \
             --name %N \
             --pull missing \
-            --secret kibana_password,type=env,target=ELASTIC_PASSWORD \
+            --secret kibana_system,type=env,target=ELASTICSEARCH_PASSWORD \
             --secret kibana_xpack_saved_objects_key,type=env,target=XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY \
             --secret kibana_xpack_reporting_key,type=env,target=XPACK_REPORTING_ENCRYPTIONKEY \
             --secret kibana_xpack_security_key,type=env,target=XPACK_SECURITY_ENCRYPTIONKEY \
             --secret es_token,type=env,target=ENROLLMENT_TOKEN \
+            -e XPACK_REPORTING_ROLES_ENABLED="true" \
             -e MONITORING_CLUSTER_ALERTS_EMAIL_NOTIFICATIONS_EMAIL_ADDRESS="example@example.com" \
             -e SERVER_NAME="0.0.0.0" \
-            -e XPACK_REPORTING_KIBANASERVER_HOSTNAME="localhost" \
-            -e SERVER_PUBLICBASEURL="http://kore:5601" \
+            -e XPACK_REPORTING_KIBANASERVER_HOSTNAME="0.0.0.0" \
+            -e SERVER_PUBLICBASEURL="http://0.0.0.0:5601" \
             -e ELASTICSEARCH_HOSTS="https://es01:9200" \
             -e ELASTICSEARCH_USERNAME=kibana_system \
             -e SERVER_NAME="kibana.kore" \
-            -e TZ="America/New_York" \
             -h kibana.kore \
             --net elastic \
             --network-alias kibana \
@@ -444,7 +444,7 @@ systemd:
         ExecStartPre=/bin/rm \
             -f %t/%n.ctr-id
         ExecStart=/bin/podman run \
-        	  --cidfile=%t/%n.ctr-id \
+            --cidfile=%t/%n.ctr-id \
             --cgroups=no-conmon \
             --rm \
             --sdnotify=conmon \
@@ -454,22 +454,25 @@ systemd:
             --pull missing \
             -h es01.kore \
             --secret elastic_password,type=env,target=ELASTIC_PASSWORD \
+            --secret elastic_password,type=env,target=ELASTICSEARCH_PASSWORD \
             -v /var/data/elastic/elasticsearch:/usr/share/elasticsearch/data:Z,U \
             -v es_config:/usr/share/elasticsearch/config \
+            -v es_logs:/usr/share/elasticsearch/logs \
             --net elastic \
             --network-alias es01 \
             -p 9200:9200 \
+            -p 9300:9300 \
             --ulimit memlock=-1:-1 \
             -m 3g \
-            -e TZ="America/New_York" \
-            -e http.host=0.0.0.0 \
-            -e transport.host=localhost \
-            -e network.host=0.0.0.0 \
+            -e TRANSPORT_HOST="localhost" \
             -e ES_JAVA_OPTS="-Xms1g -Xmx1g" \
-            -e "discovery.type=single-node" \
-            -e "bootstrap.memory_lock=true" \
-            -e "cluster.name=podman-cluster" \
-            -e network.host="0.0.0.0"
+            -e discovery.type="single-node" \
+            -e ES_SETTING_BOOTSTRAP_MEMORY__LOCK=true \
+            -e CLUSTER_NAME="podman-cluster" \
+            -e NETWORK_HOST="0.0.0.0" \
+            -e HTTP_HOST="0.0.0.0" \
+            -e XPACK_SECURITY_ENROLLMENT_ENABLED="true" \
+            -e XPACK_SECURITY_TRANSPORT_SSL_ENABLED="true" \
             docker.elastic.co/elasticsearch/elasticsearch:8.6.0-amd64
 
         ExecStop=/usr/bin/podman stop \
