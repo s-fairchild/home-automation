@@ -68,13 +68,14 @@ metricbeat.modules:
     - process_summary # Process summary
     - uptime          # System Uptime
     - socket_summary  # Socket summary
-    # - core           # Per CPU core usage
+    - core           # Per CPU core usage
     - diskio         # Disk IO
     - filesystem     # File system usage for each mountpoint
     - fsstat         # File system summary metrics
-    #- raid           # Raid
+    - raid           # Raid
     - socket         # Sockets and connection info (linux only)
     - service        # systemd service information
+  filesystem.ignore_types: [nfs, smbfs, autofs]
   enabled: true
   period: 10s
   processes: ['.*']
@@ -115,7 +116,7 @@ metricbeat.modules:
   #process.cmdline.cache.enabled: true
 
   # Enable collection of cgroup metrics from processes on Linux.
-  #process.cgroups.enabled: true
+  process.cgroups.enabled: true
 
   # A list of regular expressions used to whitelist environment variables
   # reported with the process metricset's events. Defaults to empty.
@@ -126,7 +127,7 @@ metricbeat.modules:
   #process.include_cpu_ticks: false
 
   # Raid mount point to monitor
-  #raid.mount_point: '/'
+  raid.mount_point: '/var/data'
 
   # Configure reverse DNS lookup on remote IP addresses in the socket metricset.
   #socket.reverse_lookup.enabled: false

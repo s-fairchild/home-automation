@@ -6,7 +6,7 @@
 *.iso.sig
 *.qcow2
 *~
-fedora_coreos/files/graylog/.env
+fedora_coreos/files/elastic/elasticsearch/.env
 fedora_coreos/files/openvpn/keys/ca.key
 fedora_coreos/files/openvpn/keys/ca.crt
 fedora_coreos/files/openvpn/keys/kore.key

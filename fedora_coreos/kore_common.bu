@@ -363,6 +363,7 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
+    # TODO put all containers in a pod and use podman generate systemd
     - name: elasticsearch.service
       enabled: true
       contents: |
@@ -703,10 +704,10 @@ storage:
       size_mib: 8192
       resize: true
     - size_mib: 0
-      label: containers
+      label: var
   filesystems:
-    - path: /var/lib/containers
-      device: /dev/disk/by-partlabel/containers
+    - path: /var
+      device: /dev/disk/by-partlabel/var
       format: btrfs
       with_mount_unit: true
 
