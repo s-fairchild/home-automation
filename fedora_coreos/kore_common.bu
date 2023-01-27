@@ -2,7 +2,7 @@ variant: fcos
 version: 1.4.0
 kernel_arguments:
   should_exist:
-    # Attempt to disable power saving autosuspend
+    # Disable power saving autosuspend
     - usbcore.autosuspend=-1
 passwd:
   groups:
@@ -193,6 +193,7 @@ systemd:
             --rm \
             --replace \
             --name %N \
+            -h %N.kore \
             --label "io.containers.autoupdate=registry" \
             -p 8096:8096/tcp \
             -p 8920:8920/tcp \
@@ -254,10 +255,10 @@ systemd:
             -v pihole-log:/var/log \
             --dns 127.0.0.1 \
             --dns 1.1.1.1 \
-            --hostname pi.hole \
-            -e VIRTUAL_HOST=pi.hole \
-            -e PROXY_LOCATION=pi.hole \
-            -e ServerIP=10.50.0.1 \
+            --hostname %N.kore \
+            -e VIRTUAL_HOST=%N.kore \
+            -e PROXY_LOCATION=%N.kore \
+            -e ServerIP=10.50.0.2 \
             -p 53:53/udp \
             -p 53:53/tcp \
             -p 8080:80 \
@@ -362,75 +363,16 @@ systemd:
         [Install]
         WantedBy=multi-user.target
 
-    - name: kibana.service
-      enabled: true
-      contents: |
-        [Unit]
-        After=network.target
-        Wants=network-online.target
-        RequiresMountsFor=%t/containers
-        After=elasticsearch.service
-
-        [Service]
-        Type=notify
-        NotifyAccess=all
-        RestartSec=30
-        TimeoutStopSec=70
-        Restart=on-failure
-        Environment=PODMAN_SYSTEMD_UNIT=%n
-
-        ExecStartPre=/usr/local/bin/check_podman_network.sh elastic
-        ExecStartPre=/bin/rm \
-            -f %t/%n.ctr-id
-            # --secret es_token,type=env,target=ENROLLMENT_TOKEN \
-        ExecStart=/bin/podman run \
-            --cidfile=%t/%n.ctr-id \
-            --cgroups=no-conmon \
-            --sdnotify=conmon \
-            --rm \
-            -d \
-            --replace \
-            --name %N \
-            --pull missing \
-            --secret kibana_system,type=env,target=ELASTICSEARCH_PASSWORD \
-            --secret kibana_xpack_saved_objects_key,type=env,target=XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY \
-            --secret kibana_xpack_reporting_key,type=env,target=XPACK_REPORTING_ENCRYPTIONKEY \
-            --secret kibana_xpack_security_key,type=env,target=XPACK_SECURITY_ENCRYPTIONKEY \
-            -e XPACK_REPORTING_ROLES_ENABLED="false" \
-            -e MONITORING_CLUSTER_ALERTS_EMAIL_NOTIFICATIONS_EMAIL_ADDRESS="example@example.com" \
-            -e SERVER_NAME="0.0.0.0" \
-            -e XPACK_REPORTING_KIBANASERVER_HOSTNAME="es01" \
-            -e SERVER_PUBLICBASEURL="http://0.0.0.0:5601" \
-            -e ELASTICSEARCH_HOSTS="https://es01:9200" \
-            -e ELASTICSEARCH_USERNAME=kibana_system \
-            -e SERVER_NAME="kibana.kore" \
-            -h kibana.kore \
-            --net elastic \
-            --network-alias kibana \
-            -m 2g \
-            -p 5601:5601 \
-            -v /var/data/elastic/kibana:/usr/share/kibana/data:Z,U \
-            -v kibana_config:/usr/share/kibana/config:Z,U \
-            docker.elastic.co/kibana/kibana:8.6.0-amd64
-        ExecStop=/usr/bin/podman stop \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-        ExecStopPost=/usr/bin/podman rm \
-            -f \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-
-        [Install]
-        WantedBy=multi-user.target
-
     - name: elasticsearch.service
       enabled: true
       contents: |
         [Unit]
         After=network.target
-        Before=graylog.service
+        After=rpm-ostree-install-pkgs.service
         Wants=network-online.target
         RequiresMountsFor=%t/containers
+        ConditionPathExists=/usr/bin/podman-compose
+        ConditionPathExists=/usr/local/bin/elastic/container-compose.yml
 
         [Service]
         Type=notify
@@ -439,47 +381,20 @@ systemd:
         TimeoutStopSec=70
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
+        WorkingDirectory=/usr/local/bin/elastic
 
-        ExecStartPre=/usr/local/bin/check_podman_network.sh elastic
-        ExecStartPre=/bin/rm \
-            -f %t/%n.ctr-id
-        ExecStart=/bin/podman run \
-            --cidfile=%t/%n.ctr-id \
-            --cgroups=no-conmon \
-            --rm \
-            --sdnotify=conmon \
-            -d \
-            --replace \
-            --name %N \
-            --pull missing \
-            -h es01.kore \
-            --secret elastic_password,type=env,target=ELASTIC_PASSWORD \
-            --secret elastic_password,type=env,target=ELASTICSEARCH_PASSWORD \
-            -v /var/data/elastic/elasticsearch:/usr/share/elasticsearch/data:Z,U \
-            -v es_config:/usr/share/elasticsearch/config \
-            -v es_logs:/usr/share/elasticsearch/logs \
-            --net elastic \
-            --network-alias es01 \
-            -p 9200:9200 \
-            -p 9300:9300 \
-            --ulimit memlock=-1:-1 \
-            -m 3g \
-            -e TRANSPORT_HOST="localhost" \
-            -e ES_JAVA_OPTS="-Xms1g -Xmx1g" \
-            -e discovery.type="single-node" \
-            -e ES_SETTING_BOOTSTRAP_MEMORY__LOCK=true \
-            -e CLUSTER_NAME="podman-cluster" \
-            -e NETWORK_HOST="0.0.0.0" \
-            -e HTTP_HOST="0.0.0.0" \
-            docker.elastic.co/elasticsearch/elasticsearch:8.6.0-amd64
+        # The order of podman args and podman-compose args here is important
+        # podman args go before command (up, down), then command options
+        ExecStart=/usr/bin/podman-compose \
+            --podman-run-args='--secret=elastic,type=env,target=ELASTIC_PASSWORD --secret=kibana,type=env,target=KIBANA_PASSWORD --secret=kibana,type=env,target=ELASTICSEARCH_PASSWORD' \
+            --podman-pull-args missing \
+            up \
+            -d
 
-        ExecStop=/usr/bin/podman stop \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-        ExecStopPost=/usr/bin/podman rm \
-            -f \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
+        ExecStop=/usr/bin/podman-compose stop \
+            -t 10 2> /dev/null
+        ExecStopPost=/usr/bin/podman-compose down \
+            -t 10 2> /dev/null
 
         [Install]
         WantedBy=multi-user.target
@@ -512,17 +427,22 @@ systemd:
             --replace \
             --name %N \
             --pull missing \
-            -v /usr/local/etc/%N.yml:/usr/share/%N/%N.yml:ro \
+            --secret elastic,type=env,target=ELASTICSEARCH_PASSWORD \
+            -e ELASTICSEARCH_USERNAME="elastic" \
+            -v /usr/local/etc/elastic/beats/%N.yml:/usr/share/%N/%N.yml:ro \
             -v /run/podman/podman.sock:/var/run/docker.sock:ro \
             -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
             -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
             -v /proc:/hostfs/proc:ro \
             -v /:/hostfs:ro \
-            --net=host \
+            --network host \
             --cap-add SYS_PTRACE \
             --cap-add DAC_READ_SEARCH \
-            docker.elastic.co/beats/%N-oss:7.10.2 \
+            docker.elastic.co/beats/metricbeat-oss:8.6.1-amd64 \
+                --strict.perms=false \
+                -e -E output.elasticsearch.hosts=["elasticsearch:9200"] \
                 -e -system.hostfs=/hostfs
+
         ExecStop=/usr/bin/podman stop \
             --ignore -t 10 \
             --cidfile=%t/%n.ctr-id
@@ -730,7 +650,6 @@ systemd:
         Before=motionplus.service
         Before=v4l2rtspserver.service
         Before=pihole.service
-        Before=graylog.service
 
         [Service]
         WorkingDirectory=/tmp
@@ -747,14 +666,6 @@ systemd:
     - name: openvpn-server@servertcp.service
       enabled: true
       
-      # Install admin tools
-      # `--allow-inactive` ensures that rpm-ostree does not return an error
-      # We run before `zincati.service` to avoid conflicting rpm-ostree
-      # transactions.
-      # if the package is already installed. This is useful if the package is
-      # added to the root image in a future Fedora CoreOS release as it will
-      # prevent the service from failing.
-      # Restart policy is to try again later if another rpm-ostree deployment is active
     - name: rpm-ostree-install-pkgs.service
       enabled: true
       contents: |
@@ -771,7 +682,12 @@ systemd:
         Restart=on-failure
         RestartSec=60
         ExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \
-            vim htop screen iotop openvpn
+            vim \
+            htop \
+            screen \
+            iotop \
+            openvpn \
+            podman-compose
         ExecStart=/bin/touch /var/lib/%N.stamp
 
         [Install]
@@ -809,8 +725,10 @@ storage:
         name: root
       mode: 0755
   
-    - path: /var/data/elastic/kibana
-    - path: /var/data/elastic/elasticsearch
+    - path: /var/data/elastic/esdata01
+    - path: /var/data/elastic/esdata02
+    - path: /var/data/elastic/esdata03
+    - path: /var/data/elastic/kibanadata
 
     - path: /var/data/git
       user:
@@ -893,6 +811,14 @@ storage:
     - path: /usr/local/etc/elastic
 
   files:
+    - path: /usr/local/bin/elastic/container-compose.yml
+      contents:
+        local: bin/elastic/container-compose.yml
+    
+    - path: /usr/local/bin/elastic/.env
+      contents:
+        local: elastic/.env
+
     - path: /usr/local/etc/elastic/elasticsearch.yml
       contents:
         local: elastic/elasticsearch.yml
@@ -973,11 +899,6 @@ storage:
         inline: |
           export EDITOR=vim
 
-    - path: /usr/local/etc/graylog/.env
-      mode: 0600
-      contents:
-        local: graylog/.env
-    
     - path: /usr/local/bin/check_podman_network.sh
       overwrite: true
       mode: 0700
@@ -1020,13 +941,19 @@ storage:
       overwrite: true
       mode: 0644
       contents:
-        local: beats/journalbeat.yml
+        local: elastic/beats/journalbeat.yml
     
-    - path: /usr/local/etc/metricbeat.yml
+    - path: /usr/local/etc/elastic/beats/metricbeat.yml
       overwrite: true
       mode: 0644
       contents:
-        local: beats/metricbeat.yml
+        local: elastic/beats/metricbeat.yml
+
+    - path: /usr/local/etc/elastic/beats/packetbeat.yml
+      overwrite: true
+      mode: 0644
+      contents:
+        local: elastic/beats/packetbeat.yml
 
     # Openvpn config files
     - path: /etc/openvpn/server/keys/ca.key
