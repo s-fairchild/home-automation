@@ -18,5 +18,16 @@ production: common
 	butane -s -d files/ -p kore_btrfs_raid10.bu > files/ignitions/kore_btrfs_raid10.ign && \
 	butane -s -d files/ -p kore_production.bu > files/ignitions/kore_production.ign
 
-wireguard-qr-code:
-	qrencode -t ansiutf8 -r wireguard/client/client1.conf
+install-compose:
+	COMPOSE="files/bin/podman-compose" && \
+	curl -o $$COMPOSE https://raw.githubusercontent.com/containers/podman-compose/devel/podman_compose.py && \
+	chmod +x $$COMPOSE
+
+install-compose-host:
+	sudo curl -o /usr/local/bin/podman-compose https://raw.githubusercontent.com/containers/podman-compose/devel/podman_compose.py && \
+	sudo chmod +x /usr/local/bin/podman-compose && \
+	sudo dnf in python3-dotenv podman-plugins python3-dotenv+cli -y && \
+	if podman-compose version; then \
+		echo "Successfully installed podman-compose"; \
+		else echo "failed to install podman-compose"; \
+	fi

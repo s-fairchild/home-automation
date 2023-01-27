@@ -319,188 +319,48 @@ systemd:
         [Install]
         WantedBy=multi-user.target
     
-    # TODO finish nginx reverse proxy setup
-    - name: nginx.service
+    - name: elastic-podman-compose.service
       enabled: false
-      contents: |
-        [Unit]
-        Description=Nginx Reverse Proxy Server
-        After=network.target
-        Wants=network-online.target
-        RequiresMountsFor=%t/containers
-
-        [Service]
-        Type=notify
-        NotifyAccess=all
-        RestartSec=30
-        TimeoutStopSec=70
-        Restart=on-failure
-        Environment=PODMAN_SYSTEMD_UNIT=%n
-
-        ExecStartPre=/bin/rm \
-            -f %t/%n.ctr-id
-        ExecStart=podman run \
-        	  --cidfile=%t/%n.ctr-id \
-            --cgroups=no-conmon \
-            --rm \
-            --sdnotify=conmon \
-            -d \
-            --replace \
-            --name nginx \
-            --pull missing \
-            --label "io.containers.autoupdate=registry" \
-            -p 8080:80 \
-            -p 443:443 \
-            registry.access.redhat.com/ubi9/nginx-120:1-75
-        ExecStop=/usr/bin/podman stop \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-        ExecStopPost=/usr/bin/podman rm \
-            -f \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-
-        [Install]
-        WantedBy=multi-user.target
-
-    # TODO put all containers in a pod and use podman generate systemd
-    - name: elasticsearch.service
-      enabled: true
       contents: |
         [Unit]
         After=network.target
         After=rpm-ostree-install-pkgs.service
         Wants=network-online.target
         RequiresMountsFor=%t/containers
-        ConditionPathExists=/usr/bin/podman-compose
-        ConditionPathExists=/usr/local/bin/elastic/container-compose.yml
+        ConditionPathExists=/usr/local/bin/podman-compose
+        ConditionPathExists=/usr/local/etc/elk/docker-compose.yml
 
         [Service]
-        Type=notify
-        NotifyAccess=all
-        RestartSec=30
-        TimeoutStopSec=70
+        Type=forking
+        # NotifyAccess=all
+        RestartSec=60
+        TimeoutStopSec=300
         Restart=on-failure
         Environment=PODMAN_SYSTEMD_UNIT=%n
-        WorkingDirectory=/usr/local/bin/elastic
+        WorkingDirectory=/usr/local/etc/elk
 
-        # The order of podman args and podman-compose args here is important
-        # podman args go before command (up, down), then command options
-        ExecStart=/usr/bin/podman-compose \
-            --podman-run-args='--secret=elastic,type=env,target=ELASTIC_PASSWORD --secret=kibana,type=env,target=KIBANA_PASSWORD --secret=kibana,type=env,target=ELASTICSEARCH_PASSWORD' \
-            --podman-pull-args missing \
+        ExecStartPre=/bin/rm \
+            -f %t/pod-%n.infra.ctr-id \
+            %t/%n.infra.pod-id
+        ExecStart=/usr/local/bin/podman-compose \
+            --pod-args="--infra-conmon-pidfile=%t/%n.infra.ctr-id --pod-id-file=%t/%n.infra.pod-id --infra=true" \
             up \
             -d
 
-        ExecStop=/usr/bin/podman-compose stop \
-            -t 10 2> /dev/null
-        ExecStopPost=/usr/bin/podman-compose down \
-            -t 10 2> /dev/null
+        ExecStop=/usr/local/bin/podman-compose \
+            --podman-stop-args="--pod-id-file=%t/%n.infra.pod-id" \
+            stop \
+            -t 10 \
+            2> /dev/null
+        ExecStopPost=/usr/local/bin/podman-compose \
+            --podman-stop-args="--pod-id-file=%t/%n.infra.pod-id" \
+            down \
+            -t 10 \
+            2> /dev/null
 
         [Install]
         WantedBy=multi-user.target
 
-    - name: metricbeat.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Metricbeat metric elastic beats shipper
-        After=network.target
-        Wants=network-online.target
-        RequiresMountsFor=%t/containers
-
-        [Service]
-        Type=notify
-        NotifyAccess=all
-        RestartSec=30
-        TimeoutStopSec=70
-        Restart=on-failure
-        Environment=PODMAN_SYSTEMD_UNIT=%n
-
-        ExecStartPre=/bin/rm \
-            -f %t/%n.ctr-id
-        ExecStart=/bin/podman run \
-        	  --cidfile=%t/%n.ctr-id \
-            --cgroups=no-conmon \
-            --rm \
-            --sdnotify=conmon \
-            -d \
-            --replace \
-            --name %N \
-            --pull missing \
-            --secret elastic,type=env,target=ELASTICSEARCH_PASSWORD \
-            -e ELASTICSEARCH_USERNAME="elastic" \
-            -v /usr/local/etc/elastic/beats/%N.yml:/usr/share/%N/%N.yml:ro \
-            -v /run/podman/podman.sock:/var/run/docker.sock:ro \
-            -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
-            -v /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro \
-            -v /proc:/hostfs/proc:ro \
-            -v /:/hostfs:ro \
-            --network host \
-            --cap-add SYS_PTRACE \
-            --cap-add DAC_READ_SEARCH \
-            docker.elastic.co/beats/metricbeat-oss:8.6.1-amd64 \
-                --strict.perms=false \
-                -e -E output.elasticsearch.hosts=["elasticsearch:9200"] \
-                -e -system.hostfs=/hostfs
-
-        ExecStop=/usr/bin/podman stop \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-        ExecStopPost=/usr/bin/podman rm \
-            -f \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-
-        [Install]
-        WantedBy=multi-user.target
-
-    - name: journalbeat.service
-      enabled: true
-      contents: |
-        [Unit]
-        Description=Journal beat elastic beats journal shipper
-        After=network.target
-        Wants=network-online.target
-        RequiresMountsFor=%t/containers
-
-        [Service]
-        Type=notify
-        NotifyAccess=all
-        RestartSec=30
-        TimeoutStopSec=70
-        Restart=on-failure
-        Environment=PODMAN_SYSTEMD_UNIT=%n
-
-        ExecStartPre=/bin/rm \
-            -f %t/%n.ctr-id
-        ExecStart=/bin/podman run \
-        	  --cidfile=%t/%n.ctr-id \
-            --cgroups=no-conmon \
-            --rm \
-            --sdnotify=conmon \
-            -d \
-            --replace \
-            --name %N \
-            --pull missing \
-            -v /usr/local/etc/%N.yml:/usr/share/%N/%N.yml:ro \
-            -v /var/log/journal:/var/log/journal:ro \
-            -v /etc/machine-id:/etc/machine-id:ro \
-            -v /run/systemd:/run/systemd:ro \
-            -v /etc/hostname:/etc/hostname:ro \
-            docker.elastic.co/beats/%N-oss:7.10.2 \
-                journalbeat -e -strict.perms=false
-        ExecStop=/usr/bin/podman stop \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-        ExecStopPost=/usr/bin/podman rm \
-            -f \
-            --ignore -t 10 \
-            --cidfile=%t/%n.ctr-id
-
-        [Install]
-        WantedBy=multi-user.target
-    
     - name: gollum.service
       enabled: false
       contents: |
@@ -630,6 +490,7 @@ systemd:
         Description=Initializes bare git repositories to serve as remote repositories
         After=network-online.target
         Wants=network-online.target
+        ConditionPathExists=!/var/lib/%N.stamp
 
         [Service]
         User=git
@@ -637,6 +498,7 @@ systemd:
         WorkingDirectory=/home/git
         Type=simple
         ExecStart=/usr/local/bin/git-server-init.sh -d /var/data/git/obsidian.git
+        ExecStart=/bin/touch /var/lib/%N.stamp
 
         [Install]
         WantedBy=multi-user.target
@@ -651,15 +513,19 @@ systemd:
         Before=motionplus.service
         Before=v4l2rtspserver.service
         Before=pihole.service
+        ConditionPathExists=!/var/lib/%N.stamp
 
         [Service]
         WorkingDirectory=/tmp
-        Type=simple
+        Type=oneshot
         ExecStart=/usr/local/bin/create_podman_secrets.sh
+        ExecStart=/bin/touch /var/lib/%N.stamp
 
         [Install]
         WantedBy=multi-user.target
       
+    - name: podman.socket
+      enabled: true
     - name: podman-auto-update.timer
       enabled: true
     - name: openvpn-server@serverudp.service
@@ -688,7 +554,9 @@ systemd:
             screen \
             iotop \
             openvpn \
-            podman-compose
+            python3-pyyaml \
+            python3-dotenv \
+            python3-dotenv+cli
         ExecStart=/bin/touch /var/lib/%N.stamp
 
         [Install]
@@ -704,11 +572,14 @@ storage:
       size_mib: 8192
       resize: true
     - size_mib: 0
-      label: var
+      label: containers
+
   filesystems:
-    - path: /var
-      device: /dev/disk/by-partlabel/var
+    - path: /var/lib/containers
+      device: /dev/disk/by-partlabel/containers
       format: btrfs
+      uuid: 938a230d-a552-4baa-8f99-b4f59bbd236c
+      wipe_filesystem: false
       with_mount_unit: true
 
   links:
@@ -717,6 +588,10 @@ storage:
 
     - path: /home/steven/motionplus
       target: /var/data/motionplus
+  
+  trees:
+    - path: /usr/local/etc/elk
+      local: vendor/docker-elk/
 
   directories:
     - path: /var/data
@@ -725,11 +600,6 @@ storage:
       group:
         name: root
       mode: 0755
-  
-    - path: /var/data/elastic/esdata01
-    - path: /var/data/elastic/esdata02
-    - path: /var/data/elastic/esdata03
-    - path: /var/data/elastic/kibanadata
 
     - path: /var/data/git
       user:
@@ -812,22 +682,29 @@ storage:
     - path: /usr/local/etc/elastic
 
   files:
-    - path: /usr/local/bin/elastic/container-compose.yml
+    - path: /usr/local/bin/podman-compose
       contents:
-        local: bin/elastic/container-compose.yml
-    
-    - path: /usr/local/bin/elastic/.env
-      contents:
-        local: elastic/.env
-
-    - path: /usr/local/etc/elastic/elasticsearch.yml
-      contents:
-        local: elastic/elasticsearch.yml
-
-    - path: /usr/local/bin/init_kibana.sh 
-      contents:
-        local: bin/init_kibana.sh
+        source: https://raw.githubusercontent.com/containers/podman-compose/devel/podman_compose.py
       mode: 0755
+    
+    # - path: /usr/local/etc/elk
+    #   contents:
+    #     source: https://github.com/deviantony/docker-elk/archive/refs/tags/8.2212.1.tar.gz
+    #   user:
+    #     name: root
+    #   group:
+    #     name: root
+    #   overwrite: true
+    
+    # - path: /usr/local/etc/elk/.env
+    #   contents:
+    #     local: vendor/docker-elk/.env
+    #   overwrite: true
+    
+    # - path: /usr/local/etc/elk/docker-compose.yml
+    #   contents:
+    #     local: vendor/docker-elk/docker-compose.yml
+    #   overwrite: true
 
     - path: /usr/local/bin/git-server-init.sh
       contents:

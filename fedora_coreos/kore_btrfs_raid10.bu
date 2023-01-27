@@ -16,11 +16,19 @@ storage:
         - /dev/disk/by-partlabel/raid10.2
         - /dev/disk/by-partlabel/raid10.3
         - /dev/disk/by-partlabel/raid10.4
+        - /dev/disk/by-partlabel/raid10.5
+        - /dev/disk/by-partlabel/raid10.6
+        - /dev/disk/by-partlabel/raid10.7
+        - /dev/disk/by-partlabel/raid10.8
       mount_options:
         - device=/dev/disk/by-partlabel/raid10.1
         - device=/dev/disk/by-partlabel/raid10.2
         - device=/dev/disk/by-partlabel/raid10.3
         - device=/dev/disk/by-partlabel/raid10.4
+        - device=/dev/disk/by-partlabel/raid10.5
+        - device=/dev/disk/by-partlabel/raid10.6
+        - device=/dev/disk/by-partlabel/raid10.7
+        - device=/dev/disk/by-partlabel/raid10.8
         - compress=zstd:1
         - x-systemd.device-timeout=0
       with_mount_unit: true
@@ -62,10 +70,37 @@ storage:
           start_mib: 0
           type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
           should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500e642d1f3
+      wipe_table: false
+      partitions:
+        - label: raid10.5
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500e62fb786
+      wipe_table: false
+      partitions:
+        - label: raid10.6
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
+    - device: /dev/disk/by-id/wwn-0x5000c500e643147a
+      wipe_table: false
+      partitions:
+        - label: raid10.7
+          number: 1
+          size_mib: 0
+          start_mib: 0
+          type_guid: A19D880F-05FC-4D3B-A006-743F0F84911E
+          should_exist: true
     - device: /dev/disk/by-id/wwn-0x5000c500c8a40802
       wipe_table: false
       partitions:
-        - label: backups
+        - label: raid10.8
           number: 1
           size_mib: 0
           start_mib: 0

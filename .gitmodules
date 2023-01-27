@@ -1,0 +1,3 @@
+[submodule "fedora_coreos/files/vendor/docker-elk"]
+	path = fedora_coreos/files/vendor/docker-elk
+	url = https://github.com/deviantony/docker-elk.git
