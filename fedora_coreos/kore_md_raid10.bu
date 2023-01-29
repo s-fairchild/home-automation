@@ -1,10 +1,17 @@
 variant: fcos
 version: 1.4.0
 storage:
-  raid:
-    - name: data
-      level: raid10
-      devices:
+  filesystems:
+    - path: /var/data
+      device: /dev/disk/by-partlabel/raid10.1
+      format: btrfs
+      label: data
+      uuid: 71a2b5bd-d5db-45b7-aadd-6202d2e2bccf
+      options:
+        - -m
+        - raid10
+        - -d
+        - raid10
         - /dev/disk/by-partlabel/raid10.1
         - /dev/disk/by-partlabel/raid10.2
         - /dev/disk/by-partlabel/raid10.3
@@ -13,13 +20,17 @@ storage:
         - /dev/disk/by-partlabel/raid10.6
         - /dev/disk/by-partlabel/raid10.7
         - /dev/disk/by-partlabel/raid10.8
-      spares: 2
-  filesystems:
-    - label: data
-      device: /dev/md/data
-      path: /var/data
-      format: btrfs
-      uuid: 71a2b5bd-d5db-45b7-aadd-6202d2e2bccf
+      mount_options:
+        - device=/dev/disk/by-partlabel/raid10.1
+        - device=/dev/disk/by-partlabel/raid10.2
+        - device=/dev/disk/by-partlabel/raid10.3
+        - device=/dev/disk/by-partlabel/raid10.4
+        - device=/dev/disk/by-partlabel/raid10.5
+        - device=/dev/disk/by-partlabel/raid10.6
+        - device=/dev/disk/by-partlabel/raid10.7
+        - device=/dev/disk/by-partlabel/raid10.8
+        - compress=zstd:1
+        - x-systemd.device-timeout=0
       with_mount_unit: true
       wipe_filesystem: true
   disks:

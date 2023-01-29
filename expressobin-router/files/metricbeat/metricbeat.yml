@@ -51,7 +51,7 @@ metricbeat.max_start_delay: 10s
 # being monitored.
 # This setting is experimental.
 
-#timeseries.enabled: false
+timeseries.enabled: true
 
 
 #==========================  Modules configuration =============================
@@ -130,9 +130,9 @@ metricbeat.modules:
   raid.mount_point: '/var/data'
 
   # Configure reverse DNS lookup on remote IP addresses in the socket metricset.
-  #socket.reverse_lookup.enabled: false
-  #socket.reverse_lookup.success_ttl: 60s
-  #socket.reverse_lookup.failure_ttl: 60s
+  socket.reverse_lookup.enabled: true
+  socket.reverse_lookup.success_ttl: 60s
+  socket.reverse_lookup.failure_ttl: 60s
 
   # Diskio configurations
   #diskio.include_devices: []
@@ -178,7 +178,7 @@ output.logstash:
   enabled: true
 
   # The Logstash hosts
-  hosts: ["10.50.0.2:5044"]
+  hosts: ["logstash:5044"]
 
   # Number of workers per Logstash host.
   worker: 1
@@ -221,7 +221,7 @@ output.logstash:
 
   # Optional index name. The default index name is set to metricbeat
   # in all lowercase.
-  #index: 'metricbeat'
+  index: 'metricbeat'
 
   # SOCKS5 proxy server URL
   #proxy_url: socks5://user:password@socks5-server:2233

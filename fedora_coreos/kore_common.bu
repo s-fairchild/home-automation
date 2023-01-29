@@ -319,7 +319,7 @@ systemd:
         [Install]
         WantedBy=multi-user.target
     
-    - name: elastic-podman-compose.service
+    - name: elastic.service
       enabled: false
       contents: |
         [Unit]

@@ -9,26 +9,29 @@ ignition:
 storage:
   disks:
   - device: /dev/disk/by-id/coreos-boot-disk
-    wipe_table: false
+    wipe_table: true
     partitions:
     - number: 4
       label: root
       # TODO resize partitions on prod server for larger root
-      # size_mib: 30720
-      size_mib: 8192
+      size_mib: 102400
       resize: true
+    - size_mib: 307200
+      label: log
     - size_mib: 0
-      label: containers
-      # TODO create more partitions for 2TB disk
-      # /var
-      # /var/containers
-      # /var/log
+      label: var
   filesystems:
-    - path: /var/lib/containers
-      device: /dev/disk/by-partlabel/containers
+    - path: /var
+      device: /dev/disk/by-partlabel/var
       format: btrfs
-      uuid: 938a230d-a552-4baa-8f99-b4f59bbd236c
-      wipe_filesystem: false
+      # uuid: 938a230d-a552-4baa-8f99-b4f59bbd236c
+      wipe_filesystem: true
+      with_mount_unit: true
+    - path: /var/log
+      device: /dev/disk/by-partlabel/log
+      format: btrfs
+      # uuid: 938a230d-a552-4baa-8f99-b4f59bbd236c
+      wipe_filesystem: true
       with_mount_unit: true
   files:
     - path: /etc/hostname
