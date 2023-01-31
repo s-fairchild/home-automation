@@ -1,8 +1,7 @@
-#!/bin/bash -x
+#!/bin/bash
 
 set -o nounset -o errexit
 
-# TODO add getopts to use flags
 main() {
     IMG_PATH="${IMG_PATH:-/var/lib/libvirt/images/pool}"
     if [[ ${DOWNLOAD_IMAGE:-false} == "true" ]]; then
@@ -73,7 +72,7 @@ abort() {
 
 usage() {
     echo -e "USAGE:
-    ./${0} -f <IGNITION_FILE> [-d]
+    ${0} -f <IGNITION_FILE> [-d]
 
 ARGS:
     -f          Ignition file for machine to use during bootstrap
