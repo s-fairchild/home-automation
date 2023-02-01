@@ -4,22 +4,25 @@ set -o nounset -o errexit
 
 # TODO add getopts to use flags
 main() {
-    IMG_PATH="${IMG_PATH:-/var/lib/libvirt/images/pool}"
+    POOL="${POOL:-nfspool}"
+    IMG_PATH="${IMG_PATH:-/var/lib/libvirt/${POOL}/images}"
     if [[ ${DOWNLOAD_IMAGE:-false} == "true" ]]; then
         download_update_image "$IMG_PATH"
         exit 0
     fi
     echo "IGNITION_FILE location: ${IGNITION_FILE:?Ignition file must be provided. See ${0} -h for usage information.}"
     IGNITION_CONFIG="/var/lib/libvirt/filesystems/$(basename ${IGNITION_FILE})"
+    # if [ "${BACKING_STORE:-false}" != "false" ]; then
     latest_img="$(get_latest_image "$IMG_PATH")"
-    IMAGE="${BACKING_STORAGE:-$latest_img}"
+    IMAGE="${BACKING_STORE:-$latest_img}"
+    # fi
     
-    # TODO calculate these based on system resources
-    VM_NAME="fcos-test-01"
-    VCPUS="4"
-    RAM_MB="10240"
-    STREAM="stable"
-    DISK_GB="20"
+    VM_NAME="${VM_NAME:-fcos-test-01}"
+    VCPUS="${VCPUS:-4}"
+    RAM_MB="${RAM_MB:-10240}"
+    STREAM="${STREAM:-stable}"
+    DISK_GB="${DISK_GB:-20}"
+    NETWORK="${NETWORK:-nat}"
 
     set_permissions
 
@@ -27,25 +30,36 @@ main() {
         --os-variant="fedora-coreos-$STREAM" \
         --import \
         --graphics=spice \
-        --disk="size=${DISK_GB},backing_store=${IMAGE}" \
-        --network network=default \
-        --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGNITION_CONFIG}"
+        --disk="pool=${POOL},size=${DISK_GB},backing_store=${IMAGE},cache=writeback,sparse=yes" \
+        --network "network=${NETWORK}" \
+        --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGNITION_CONFIG}" \
+        --check disk_size=off \
+        --autostart \
+        --noautoconsole
 
     # sudo virsh destroy fcos-test-01 && sudo virsh undefine --remove-all-storage fcos-test-01
 }
 
+create_storage_pool() {
+    systemctl enable --now nfs-server
+    exportfs -r
+    virsh pool-define-as nfspool netfs --source-host localhost --source-path /var/data/nfspool/ --target /var/lib/libvirt/images/nfspool/
+    virsh pool-autostart nfspool
+}
+
 set_permissions() {
     sudo cp "$IGNITION_FILE" "$IGNITION_CONFIG"
-    sudo chcon --verbose --type svirt_home_t "$IGNITION_CONFIG"
-    sudo chcon --verbose --type virt_image_t "$IMAGE"
+    # sudo chcon --verbose --type svirt_home_t "$IGNITION_CONFIG"
+    # sudo chcon --verbose --type virt_image_t "$IMAGE"
     sudo chown qemu: "$IGNITION_CONFIG"
     sudo chown qemu: "$IMAGE"
+    chown -R qemu: "${IMG_PATH}"
 }
 
 get_latest_image() {
     local pool="$1"
     local latest
-    latest="$(sudo ls -lhtr ${pool} | tail -n -1 | cut -d ' ' -f 9)"
+    latest="$(sudo ls -ltr ${pool} | tail -n -1 | cut -d ' ' -f 10)"
     if [[ -z $latest ]]; then
         abort "failed to find latest fedora coreos image"
     fi
@@ -73,11 +87,13 @@ abort() {
 
 usage() {
     echo -e "USAGE:
-    ./${0} -f <IGNITION_FILE> [-d]
+    ./${0} -f <IGNITION_FILE> [-d] [-b] [-h]
 
 ARGS:
     -f          Ignition file for machine to use during bootstrap
     -d          Download the latest .qcow2 libvirt image
+    -b          Backing image
+    -p          Pre existing storage pool
     -h          This help message
 
 EXAMPLES:
@@ -86,18 +102,21 @@ EXAMPLES:
     exit "${1:-0}"
 }
 
-while getopts ":f:d:b:" o; do
+while getopts ":f:d:b:p:" o; do
     case "${o}" in
         f)
             IGNITION_FILE="${OPTARG}"
             ;;
         b)
             # User provided image. If BACKING_STORAGE is null, the latest image is searched for.
-            BACKING_STORAGE="${OPTARG}"
+            BACKING_STORE="${OPTARG}"
             ;;
         d)
             IMG_PATH="${OPTARG}"   
             DOWNLOAD_IMAGE="true"
+            ;;
+        p)
+            POOL="${OPTARG}"
             ;;
         :)
             case "${OPTARG}" in

@@ -4,6 +4,10 @@ SHELL = /bin/bash
 common:
 	butane -s -d files/ -p kore_common.bu > files/ignitions/kore_common.ign
 
+podman-default:
+	 butane -s -p kore_podman_machine.bu > files/ignitions/kore_podman_simple.ign && \
+	 butane -s -p kore_simple_podman_machine.bu > files/ignitions/kore_simple_podman_machine.bu
+
 libvirt: common
 	butane -s -d files/ -p kore_libvirt.bu > files/ignitions/kore_libvirt.ign
 
