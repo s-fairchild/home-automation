@@ -5,6 +5,7 @@ passwd:
     - name: core
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFwjm/GjkqaLR3SA93Cif7U0X4GRbpsb3ussYZwTSHAZ steven@kore
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
 storage:
   disks:
   - device: /dev/disk/by-id/coreos-boot-disk
@@ -21,31 +22,37 @@ storage:
       mode: 0644
       contents:
         inline: |
-          k3s-worker-1
+          k3s-worker-2
 
     - path: /usr/local/bin/k3s-installer.sh
       contents:
         source: https://get.k3s.io 
       mode: 0744
 
-    - path: /usr/local/etc/k3s/.env
-      contents:
-        local: k3s/nodes/.env
-      mode: 0600
-
-    # - path: /usr/local/etc/k3s/k3s-installer.env
-    - path: /etc/sysconfig/k3s
+    - path: /etc/rancher/k3s/config.yaml
       contents:
         inline: |
-          # INSTALL_K3S_CHANNEL_URL="testing"
-          # INSTALL_K3S_EXEC="--disable servicelb --disable traefik"
-          # INSTALL_K3S_SKIP_SELINUX_RPM="true"
-          # INSTALL_K3S_EXEC="agent - --node-label node.kubernetes.io/worker=true"
-          INSTALL_K3S_EXEC="--node-label node-role.kubernetes.io/worker=true"
+          # node-label: node.kubernetes.io/worker=true
+          # with-node-id: true
+          # TODO try rootless?
+          # rootless: true
+          container-runtime-endpoint: "/run/podman/podman.sock"
+          server: "https://10.50.0.2:6443"
+          node-name: "k3s-worker-02"
+          selinux: true
+          debug: true
+          docker: true
+
+    - path: /etc/systemd/system/k3s-installer.service.env
+      contents:
+        inline: |
+          INSTALL_K3S_EXEC="agent - --docker --container-runtime-endpoint /run/podman/podman.sock"
+          K3S_NODE_NAME="k3s-worker-02"
           K3S_URL="https://10.50.0.2:6443"
-          K3S_KUBECONFIG_MODE="644"
           K3S_SELINUX="true"
-          K3S_NODE_NAME="k3s-worker-1"
+          INSTALL_K3S_SKIP_SELINUX_RPM="true"
+      append:
+        - local: k3s/nodes/.env
 
     - path: /etc/systemd/zram-generator.conf
       mode: 0644
@@ -56,8 +63,8 @@ storage:
 
 systemd:
   units:
-    # - name: podman.socket
-    #   enabled: true
+    - name: podman.socket
+      enabled: true
 
     - name: nm-cloud-setup.service
       enabled: false
@@ -97,6 +104,7 @@ systemd:
         Description=k3s bootstrapper
         After=network-online.target
         Wants=network-online.target
+        After=rpm-ostree-install-k3s-selinux.service
         ConditionPathExists=!/var/lib/%N.stamp
 
         [Service]
@@ -104,12 +112,16 @@ systemd:
         RemainAfterExit=yes
         Restart=on-failure
         RestartSec=60
-        EnvironmentFile=/etc/sysconfig/k3s
-        EnvironmentFile=/usr/local/etc/k3s/.env
+        EnvironmentFile=/etc/systemd/system/%n.env
         ExecStartPre=/usr/bin/chmod 0744 /usr/local/bin/k3s-installer.sh
         ExecStart=/usr/local/bin/k3s-installer.sh
 
+        ExecStart=/usr/bin/mkdir /var/lib/rancher/k3s/storage
+        ExecStart=/usr/bin/chcon --type container_file_t /var/lib/rancher/k3s/storage
+
         ExecStart=/bin/touch /var/lib/%N.stamp
+
+        ExecStopPost=shred -zu /etc/systemd/system/%n.env
 
         [Install]
         WantedBy=multi-user.target

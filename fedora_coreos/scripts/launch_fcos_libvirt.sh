@@ -4,7 +4,8 @@ set -o nounset -o errexit
 
 # TODO add getopts to use flags
 main() {
-    POOL="${POOL:-nfspool}"
+    # POOL="${POOL:-vg0}"
+    POOL="${POOL:-fedora_kore}"
     IMG_PATH="${IMG_PATH:-/var/lib/libvirt/${POOL}/images}"
     if [[ ${DOWNLOAD_IMAGE:-false} == "true" ]]; then
         download_update_image "$IMG_PATH"
@@ -12,12 +13,8 @@ main() {
     fi
     echo "IGNITION_FILE location: ${IGNITION_FILE:?Ignition file must be provided. See ${0} -h for usage information.}"
     IGNITION_CONFIG="/var/lib/libvirt/filesystems/$(basename ${IGNITION_FILE})"
-    # if [ "${BACKING_STORE:-false}" != "false" ]; then
-    latest_img="$(get_latest_image "$IMG_PATH")"
-    IMAGE="${BACKING_STORE:-$latest_img}"
-    # fi
-    
-    VM_NAME="${VM_NAME:-fcos-test-01}"
+    BACKING_STORE="${BACKING_STORE:-/dev/${POOL}/fedora-coreos-37.20230110.3.1-qemu}"
+    VM_NAME="${VM_NAME:-k3s-worker-$(( ( RANDOM % 1000 )  + 1 ))}"
     VCPUS="${VCPUS:-4}"
     RAM_MB="${RAM_MB:-10240}"
     STREAM="${STREAM:-stable}"
@@ -26,11 +23,12 @@ main() {
 
     set_permissions
 
+        # --disk="vol=${POOL}/node1,size=${DISK_GB},backing_store=${BACKING_STORE},sparse=yes" \
     virt-install --connect="qemu:///system" --name="${VM_NAME}" --vcpus="${VCPUS}" --memory="${RAM_MB}" \
+        --disk="pool=${POOL},size=${DISK_GB},backing_store=${BACKING_STORE},sparse=yes" \
         --os-variant="fedora-coreos-$STREAM" \
         --import \
         --graphics=spice \
-        --disk="pool=${POOL},size=${DISK_GB},backing_store=${IMAGE},cache=writeback,sparse=yes" \
         --network "network=${NETWORK}" \
         --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGNITION_CONFIG}" \
         --check disk_size=off \
@@ -52,8 +50,8 @@ set_permissions() {
     # sudo chcon --verbose --type svirt_home_t "$IGNITION_CONFIG"
     # sudo chcon --verbose --type virt_image_t "$IMAGE"
     sudo chown qemu: "$IGNITION_CONFIG"
-    sudo chown qemu: "$IMAGE"
-    chown -R qemu: "${IMG_PATH}"
+    # sudo chown qemu: "$IMAGE"
+    # chown -R qemu: "${IMG_PATH}"
 }
 
 get_latest_image() {
@@ -113,7 +111,7 @@ while getopts ":f:d:b:p:" o; do
             ;;
         d)
             IMG_PATH="${OPTARG}"   
-            DOWNLOAD_IMAGE="true"
+            # DOWNLOAD_IMAGE="true"
             ;;
         p)
             POOL="${OPTARG}"

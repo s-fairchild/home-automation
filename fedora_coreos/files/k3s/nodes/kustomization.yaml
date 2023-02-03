@@ -1,0 +1,15 @@
+secretGenerator:
+- name: v4l2rtspserver
+  files:
+  - v4l2rtspserver.txt
+  literals:
+  - username=user
+- name: camera1
+  files:
+  - camera1.txt
+- name: camera2
+  files:
+  - camera2.txt
+- name: camera3
+  files:
+  - camera3.txt
