@@ -1,0 +1,216 @@
+{
+  "ignition": {
+    "version": "3.3.0"
+  },
+  "passwd": {
+    "users": [
+      {
+        "name": "core",
+        "sshAuthorizedKeys": [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFwjm/GjkqaLR3SA93Cif7U0X4GRbpsb3ussYZwTSHAZ steven@kore",
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com"
+        ]
+      }
+    ]
+  },
+  "storage": {
+    "directories": [
+      {
+        "path": "/etc/containers/containers.conf.d"
+      },
+      {
+        "path": "/usr/local/etc/k3d"
+      },
+      {
+        "path": "/root/.kube"
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests"
+      }
+    ],
+    "disks": [
+      {
+        "device": "/dev/disk/by-id/coreos-boot-disk",
+        "partitions": [
+          {
+            "label": "root",
+            "number": 4,
+            "resize": true,
+            "sizeMiB": 8192
+          },
+          {
+            "label": "var",
+            "sizeMiB": 0
+          }
+        ],
+        "wipeTable": false
+      }
+    ],
+    "files": [
+      {
+        "path": "/usr/local/bin/k3d-installer.sh",
+        "contents": {
+          "source": "https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh"
+        },
+        "mode": 493
+      },
+      {
+        "path": "/usr/local/bin/k3d-create-cluster.sh",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/3RVXW8bNxB8v18xPgl2C/QsF0FfUthom7pIkTQCnBR+CAyDOq4kQjzywN2TbNj+7wV5HzrLqh8siZzdnRkuuZOT2cK42ULxGsVDNskmuGkcas+CzTsN41iUtVlWKeN++BFPGQBMxnsUwGUwtaBU1jLowQh2a3IwcsYofVVbEtJdZExvHBS4WfCarIV4bIjqPku7uAy+SqmMW6VIs8T37zhBscSs4TCzvlQ2kY9c7u5+hazJJWj8axWVyN+Ci4H4Oa/x/Awq1x75UhlLOrLp9qPIE1y3HHKcnrbSfs5TkaXJOkW/w9EOi2D0iuBIdj5sUDUsWBDKQEpIY0GlapgiSWhaqsYKaq8r5YYQ7YndmXRZ6+C3RpOGdtwbcHIYQg+GhSPRA/kHuJZFxB1w/5eNW+GvD/Ov+KMR5QjWuA33XJCilz6AfUUIpNi3RZikqe/bMvfsyw1JNuoN6/2GU6COe+GMB9U9J6cq0shb3/Iu9pZa5zrC0a1AK8MSHtEkrr4Jye8+zc7IevBoEo9vHZs3wvrIN/aV3okyjsLIwKJHHzgZ1QwUOlpF0YkpehYRVdT45eLiAkWxpbDwTG+8HokpmxDIiX18bbViKDyqykaOS7OCr8V0licFsVBpGxYKsIYFz1gFqiFGlMPpFWaatjPXWHtERx84yOjpFLE1xybEqzO6OSRlvDnp9nRJzhPL41rb/PfxDnbXv9fQ7WyaBbUCs5csmxzrpnaN+yMTj9JvadRPHaz0zlEZC6R2iy0+wRcv9B6yNozbvz9/xpf5N9zObz7h2m1N8K4iJ5d/zj98ur65/zj/+u2ycebh/Sw0btbW6z7OY5GsbWkJhhjKacSXgltGqXb8KmslIKdrb5z8hEUjmG1VSClbyilXOmXOjugdHld+ZKGqFAttWC1sPCfnd51wjJKR4CCiUrw5Cky49C9U6Qk9wu0gF7lR8ZEdXbI9MBCLCnIEYx0Kxv/YepzDS5Yd7Z7BntSQ6Xm/37zTl6k106899jw16jA12qEx7UNwd+xmDMHt5LhCPn3qI16GF3/Pbt/BA7P90mU+/Tj/53p2Hpfy1+NLI5/ukfnbyVVttAmvQX35nu1+CyuS7u5fHcQkdDvaRvhoX5xHSjB92q+/5FFbHPLIp7/l2X8BAAD///aq688YCAAA"
+        },
+        "mode": 493
+      },
+      {
+        "path": "/usr/local/etc/k3d/k3d-cluster.yaml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/3yST2/bMAzF7/4URHLodlCWLUURaJd1HQYUvQTotnNom4kFy6JB0fXy7QfJzpL9hQ+GRfL33qNsjCmwd99IouNgod3UK8dvXt6i7xu8LVoXagvPrus9FR0p1qhoC4CAHVlQpxiKSPJCEi28K/BIQaOFTRFIR5Y2IwvlloKFxXPVUIfqKvPgsTYfhceSULfma0hK5osQqnnuORwpf1QNycnsxHWotCjaoaT73WMysISGo1pYZA+rloVWDXe0QulxAUtwXc+iGBQOLKANwX4yuodIqi4cwYV8nqgVh4M7FpCpjzsLi/UqPwk1NiSUW5+GkiSQUoT73SOMznsoCbyLSiEhOcyMHUtyd3d7u/kv4jKa7P4kdtj3VIMycIATD5KhEE9RqStSa0xbMHnKwna9XdvtGpYQsSPACHtjMvBmLn3wjHWJHkNFcrMvAAAC1/TZeU2Xlw8S8Lqv4F4dh1xtN7WFZXqBDEFdR+c9xjw7olMLKgOluOimvVd+iEqSgpQEQ8TSE5R0YCEQ0kFcyv7+2naa3cOrmg44+Bn5OkskUR7yWtdxcZaZT89ULFn0d+a5524dU/TLjU+5h75GpU+T4tOleI6DdQ2Bxus0+U5mj3AZ+UX1ImMmBTMP/D1eHJ1WzcMgQkEfOCh9v2wUfeS0cKimuqmmhuQl/VZX9m4izMV/uZmUzog/3fwIAAD//5s8YMgXBAAA"
+        },
+        "mode": 384
+      },
+      {
+        "path": "/etc/hostname",
+        "contents": {
+          "compression": "",
+          "source": "data:,titan.kore.home.arpa.%0A"
+        },
+        "mode": 420
+      },
+      {
+        "path": "/etc/containers/containers.conf.d/timeout.conf",
+        "contents": {
+          "compression": "",
+          "source": "data:,%23%20Disable%20podman%20service%20timeout%0Aservice_timeout%20%3D%200%0A"
+        }
+      },
+      {
+        "path": "/etc/systemd/zram-generator.conf",
+        "contents": {
+          "compression": "",
+          "source": "data:;base64,IyBUaGlzIGNvbmZpZyBmaWxlIGVuYWJsZXMgYSAvZGV2L3pyYW0wIGRldmljZSB3aXRoIHRoZSBkZWZhdWx0IHNldHRpbmdzClt6cmFtMF0K"
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/jellyfin-pvc-hostpath.yaml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/zzOvU7rQBAF4H6f4kiu7avo3sptilsgfgRSqCe7YzJkf8zOrFGEeHdkEyjn6JxP0+GJFoadGKXZ3Axlgp1EMUlkUA5oyji3I3uL8JXJGP0EK5A0l2qugxgkW8FNO3LNbKyD61yH/dYOeBc7YS4hUe7/DX+HnaNZDlxVSh6x7NxZchjxsCZqnO1QYku8jyTJJTYKZDQ6gHIuRiYl63oCy1Ycvu1Byp9QZeE6IhZP0QGZEo945Rgvk+Q+cRByQKQjx6thl5l/BjqzX1O1Uull/UD1biMS5baJ5D2r3pbA277HI1N4rmJ8nz07oLKWVj1f+cpvjdWu1y89YvdfnBpZ0xEfn859BQAA//+BMEyaiwEAAA=="
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/jellyfin-pvc.yml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/1yPsW4bMRBEe37FwFffRZKdwmwNJEUQRFAMB0i3JveijUnuhVwqEIL8u3Gy3bicwey+mQHf6cSwI0O7Ld2gM+woDbMkBpWI3hhP/ZGDJYTKZIxxhikkL1rNDRCDFFN86Y9cCxu3yQ1uwN0lHfFX7IhFY6Yy3kzX09bRIg9cm2jxOG3dk5TosV+dZlzsQVPPfJdIsstsFMnIO4BKUSMTLW2VwOkSnF5+T6IfYpUTV4+kgZLDS2HRci+Zm1FePK52m931uNmNm+39buM/3vqb259XDiiU2eM3p3SepYxBy+zawuFCDoFb+6qRX8kDRhyY4o8qxt9KYIf3zl6je6u4Xnp8ksTt3IyzA5Z3cw8c1sF7TRLOHgc2kuKAyk17DW/gyn86N3tVQDOt9Is9tp/FNSPrzePff+eeAwAA//97U/5n2wEAAA=="
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/jellyfin.yaml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/5RUTW8iORC98yss7u4mkXa18Q0FssouYVBCEmUuyNgF1OC2Lbu6NcyvH/UX3UCCNMd6flWv6lV1c84H0uMbhIjOClbcDPZotWALpwcZkNSSpBgwJq11JAmdjWXI2Bqt5pnLLXHna5ylhQxpmZH+AGMOG7Tie0VGlyhnSaKFEBOZk8u9lgQdjwXYYqRwaPn7fA3BAkFMVEDukuXyo0cfbqSJMGzZ3ulM2qTXZaUSIHNFX2W4fH6dXstSqPkGTT8nDbk9hkmEUKCCRFHgqK9UQovUV34Yz16uSvuABRrYgv6Thn2+Nhh3XBrzqZqRazDNzqT3grWkAWNWZtADogdVEq3TMK+ehnsXKpNLM6tlv9Tjj5Uqo6XbgxWs2sWAsW7HZRnOwBa1MG+k/pvOZh8Pj/PVou4adFkPwmswFY+xQpocBNsReZGmN6Pkr1EySm7FP6O7v2sXMrkFwbRTewgJuuPQ3fRGEkSq2GcTlpB3gWLb1rHjhQsk2FGFsZ2LdAZe0u9uR5f0Foyg8oB0uHeW4CeJhqmkl2s0SAixxRjTwfku4ux+vFg9/T//NjnD5tPl6nn8foaOXyePy9X78+NyWr0UzuQZPJUrOo5arW8haSdYmoFG2dSoLeqQU6aSagcnzA45Yzq7we0JtfWdl2/cF+qTNA1FqgOe5GkoeIt94WL3sQhGIS8bAivXBpoDnaHdx+4ya0Oas6x2Vaq3tepOLn5ezTMdPAg2wQCKXPODOjWNX53Xlz/XSGDpreri3kjMjtdQBvPL7F7VznDIPB0mGNrkiL9ghhmSYDf/Yi+lb+AX07a+/w4AAP//QYXK1QIGAAA="
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/kustomization.yaml",
+        "contents": {
+          "compression": "",
+          "source": "data:,secretGenerator%3A%0A-%20name%3A%20v4l2rtspserver%0A%20%20files%3A%0A%20%20-%20v4l2rtspserver.txt%0A"
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/pihole-pvc_config.yaml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/yyNsU7rQBBF+/2KK7m2n6JH5TYFBUIgkEI92R3Ho6x3zM6sKRD/jmJSnqujczu808bwmaHN1+bQCT6LYZLMoJLQjHFtZ46eESuTM/oJrpBl1eqhgzikuOKpnbkWdrYhdKHDcbcTvsRnrJoWKv3D8H84BFrlxNVEy4jtEK5S0ojX22LOxU+a28LHTLKEhZ0SOY0BoFLUyUWL3RDYdnH4aw+i/1KVjeuIrJFyAAotPGKVWTP3Ucskl2Arx70WI5s9a+K91uONKX1UcX4pkQNQ2bTVyPezyp+Nze8EmGulC484PEowJ2824vsnhN8AAAD//4HGPmpVAQAA"
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/pihole-pvc_log.yaml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/yyOwW7VMBBF9/6Kq2adkJfAxtsuWCAEgqpI7Kb2vGZU2xPscVgg/r1q+pZ3dDTnDPhJB8M2hnbbu0GvsE0arpIYVCJ6Y7z0Jw6WECqTMcYrTCF512pugBikmOJLf+Ja2LhNbnAD7k864q/Yhl1jpjJ+nNbp4miXR65NtHgcF/ciJXp8f7s042KPmnrm+0SSXWajSEbeAVSKGploaW8TOE5wev89iX6IVQ6uHkkDJYf3YNHyIJmbUd497pZ5Wcd5Gef1YZn9Mvv10+87BxTK7LHLponHpM+u7RxObQjc2leNfGpH/GCKv6oYfyuBHVC5aa+Bb1WV/3RudltAM630zB6Xz+KakfXm8e+/c68BAAD//zBAOhp+AQAA"
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/pihole.yaml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/6RU32/iOBB+z18xKq+X8KNbXS9viHI6tBRQSbvXfUHGGYiF44nsSbr97082CZTu9u5WK17w5Pu+mflm7B6sRYPABQLVXNUMtAMulIOd0gjC5FA7hEO9RckapEXBCPEOmECVFVmOeqAYlGGCz/UWrUFGl0S9qAeTgM7hRXEBFeWlMPGn5DoZRlEPFstsmsJsB69Uwx4N2oANuV9FqWFnqQRhoDaVVY3SuMc8FGSJWKNzrSRIMiyUQQtkPGE9nStTf4t6gEZsNebgXh1j+RvIAuUhNNtSu7yhQfCRSuwRdmTBMVbOt7kjrenF/0PjauvNEuyrtl6lf8oe9aAQLqhbtS8YKrSlck6RCTpCSl+0/96Qrkt0IPIc8ySK4zgSlXpC68EpNMPooEyeworyqEQWuWCRRgDCGGLBXtEfARQlh7Pp0qqYkix77leqII0pXO2EdnjVYY9dJ29kElEzWSypwTPpz/F8Pf03kjKKfwJ+nt/PkOqtVq6IhdY/YIVFVGQyVaJjUVYpXI0Go+t4MIoH19lokA5v05tPXz1Wiy3q1jBRVSkc5SIAI0o8HV2FMphcM5VUG16jbZTEsZT+lNEBTQrBUF9AN/YgHAOa5pghblVXD8u/nzfz5WSczZaL8AmgEboOGZO2gjP+afaQPY7nm7+W6+y/0b42tLPVJXI4SG4GySAZXWCzr5eocYlWSdFf4MvmmezhAuzTL8b3049LUKXYYwo5yQPaRFE7nW5IWjA6DsgLe33Avxeus+nk4Iosp3Bz3aYsyPG7UGWJSZJOIZusfoX+ePcB/XbwHf12cPtHCDqUtVX8OiHD+I3TFilFJbZKK1bouhhAbqk6n2KYjFeb+8+L5d272GKabR7GX95Fx493s2zz5WGWHQdwfCju/f6dfAu7uRJcpNBvhO1r2vdbmbeGx5r2cdXIH7CQZTe0CyKyjFvykZgbNyGzU/v0NE8XFu9UzHD0e+I3btidk/CLoH172zs0V+bgzpfHm9zV2i1W+yYeb9OHjVT+jXSMhp8CfqKFKk8T8YfFO+obve/6+/96Z2oU/RMAAP//l84HrDQHAAA="
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/rtsp.yaml~",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/6xUTW/jNhC961cM7D1Wn7biVLc2cepgk9aIk+7RGIkjiwhFCvzQrrHofy8o27EdN8UW6E18fPPmzWiGY1hhT2AbAuVs5yyoGmzDDdRcEKBk4AzBqyupsgIqTWgJwhqsAt52SttgDNwCl1bBZ1eSlmTJRME4GMPNwGbwldsGOsValOE0mkZJEIzh9z+e5wXc17BVDjYkSQ/cIfcWWwG1Vi2gBCc7zXsuaENsMKSVsoKM2UtCpaRFLkmDkj5gNX/g0n0LxkASS0EMzNZYan+CqqHqdSh2H3rIOxQIHulwQ1ArDcZSZ3yZtRJCffVfJI3TvllovWvtVeK37MEYGjSDuuabxkJHuuXGcCUHHawqb9rf90q4lgwgY8SiIAzDADv+J2lPLqBPg1cuWQFLxYKWLDK0WAQAKKWyaL2iPwJwFb3lNxE6q1zH0FLcT0WmrekM6Z50AZo23Fi9HaKU3kSqI3kSylvcUFSioYjxDRl7oWAazPKrAhHTWVYlk+t8dlXnFUvSaoaTnOqsyieTGUtn9bRO6p/rcsKmmOWzPE0oq34gscT20jhT1SvpiKtY8FKj3saudNK6IkuiZBoACCxJ7NuBXVfAuUIA4HUvYNNR5YOOVvwpBNSbvZg/xc7oWKgKRVxyGV9I71jhFxh9+v7l/vZ58dfoiC48upjf/7Z4PoXvPHy3XJ1iq/T4/QSNagnCF795uhh9+r6a3zzNzzRuUgh/mV4nSQIhrtKr9cP8eOl8gpenh31ApdoWJdsVFcJQSImm2Q2Qb/9pl9tOq1ZJuhgAgZaMHYJI9scW7bo7erzNVy+PB4sAPQpHd1q1xRsEYKjSZD/T9onqU/yDf3RKeKVtAS3LjWvPcNX5dUBRQI3C0HtbL08P/6un0Glx6es9+O+mhkE5N1XAKM2uk9E75m54Lqiz7IJ5t1xd0CZ71oe99c+3OczF2yIslbYFXOf5dK/YKGMvwE4rqyolCni+WQ7Y7lF7VE4eRVt/WqJtiverZCxquz43Fe2H8mB54ITvfsCec67NqI97zkglZwKM+vAN3j+6uzUfavKxh3L+u0e77XzjuaDgRyx/mHPwPhVxuQ05i50pw8Xt+gZb0rh+ROlqrKzTpNeL2/XL6tfDVZZkSZqk0yTdlRhyyehbEvxj9cHfAQAA//+2rgPH6AcAAA=="
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/url.txt",
+        "contents": {
+          "compression": "",
+          "source": "data:,dustins_room%0A"
+        },
+        "mode": 420
+      },
+      {
+        "path": "/usr/local/etc/k3d/manifests/v4l2rtspserver.yaml",
+        "contents": {
+          "compression": "gzip",
+          "source": "data:;base64,H4sIAAAAAAAC/7RUQW/jNhO961cM4j2uZEmW4nwCvsPWySLFJtvATtpjMBZHNmGJFMihEmPR/15QtmN5vekWKHrTPM6892Y44ggW2BHwmkA7bh2DroDX0kIlawJUApwl2LgllVxDaQiZIKyANcim1YaDEUgGqVjDF7cko4jJRsEoGMGszxbwInkNrRYNqjCLsigOghF8/e3xpoBfK9hqBytSZPrcXnuLTQ2V0Q2gAqdaIztZ04pEb8hozTVZu6eEUitGqciAVr5gcXMnlXsNRkAKlzUJsFvL1HyEck3lpm92X3rQ7RsEj7S4Iqi0AcvUWt9mpetav/gvUtYZPyxk79p4lvGbejCCNdqe3cjVmqEl00hrpVY9D5alN+3PO127hiygECSiIAzDAFv5OxmfXECXBBupRAEPWgQNMQpkLAIAVEozsmf0IYDU0Zu+jdCxdq1ApnGX1alh21oyHZkCDK2kZbPtq7RZRbolNSiVDa4oWqKlSMgVWT5jsGtM88sCEZNpWsaTq3x6WeWliJNyipOcqrTMJ5OpSKZVVsXV/6rlRGSY5tM8iSkt/4GwwubcuNDlhkwk9biWS4NmO3ZLp9gVaRzFWQBQ45Lq/TiwbQs4ZQgAPO8ZbFsqfZHSgr72CRttKAAYDaGJDV+02ZAJkwCOi9bLhYBmtRf2UfgHJOlVfIxvYZoOws8wGUSL5Pg9h7VuCMInuHCWTPHh2+JmNr95/PPimDNLIPyUXcVxDCEuksvnu5vjoYOLD9+e5neDgrGgbtxJQfog6ls7wT/arRVUoau5mH2aX/9/hg0Z3C2Wv5bh9JvW6EYrOluMGpks90WkuuM4dlO/uL/OF0/3F28eOqwdfTa6Kd4gAEulIf5C2zlVQ/yduxsmbGhbQCNy65oTXLf+N8G6gAprS9/beprf/ceenKl/auhdJv+w7lcrPK7dgzZcwFWeZ3vmtbZ8BrZGsy51XcDj7KHHds/NvXbqSNr46AF5XfxgVXa+BHXhAD6vsUqcFRwwS6UzkrczrZheuXgzd3jKC2Dj/Bj2j+Hul+o78grBbmHbgcOsHi+3oRRjZ5fh7fXzbl2f71G5Ckt2hszz7fXz0+KXw1Eap3ESJ1mc7BoJpRL0Gv+Ae9j932kOyM+l4izOfy71LymT4J0b+n54J40cruX0ooK/AgAA//8v4noQ/wcAAA=="
+        },
+        "mode": 420
+      }
+    ]
+  },
+  "systemd": {
+    "units": [
+      {
+        "enabled": true,
+        "name": "podman.socket"
+      },
+      {
+        "enabled": false,
+        "mask": true,
+        "name": "docker.service"
+      },
+      {
+        "enabled": true,
+        "mask": true,
+        "name": "docker.socket"
+      },
+      {
+        "enabled": false,
+        "mask": true,
+        "name": "nm-cloud-setup.service"
+      },
+      {
+        "enabled": false,
+        "mask": true,
+        "name": "nm-cloud-setup.socket"
+      },
+      {
+        "contents": "[Unit]\nDescription=Install rancher k3s selinux package with rpm-ostree\nAfter=network-online.target\nWants=network-online.target\nConditionPathExists=!/var/lib/%N.stamp\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nRestart=on-failure\nRestartSec=60\nExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \\\n    vim \\\n    podman-docker \\\n    kubernetes-client\n\nExecStart=/bin/touch /var/lib/%N.stamp\n\n[Install]\nWantedBy=multi-user.target\n",
+        "enabled": true,
+        "name": "rpm-ostree-install-k3s-selinux.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=k3s bootstrapper\nAfter=network-online.target\nWants=network-online.target\nAfter=rpm-ostree-install-k3s-selinux.service\nConditionPathExists=!/var/lib/%N.stamp\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nRestart=on-failure\nExecStart=/bin/touch /var/lib/%N.stamp\nExecStart=/usr/local/bin/k3d-create-cluster.sh\n\n[Install]\nWantedBy=multi-user.target\n",
+        "enabled": true,
+        "name": "k3d-install-cluster.service"
+      }
+    ]
+  }
+}

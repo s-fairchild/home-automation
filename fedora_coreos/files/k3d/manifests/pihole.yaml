@@ -1,0 +1,72 @@
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-4.3.1
+
+# NOTE: If you generated this yaml from an unprivileged and rootless podman container on an SELinux
+# enabled system, check the podman generate kube man page for steps to follow to ensure that your pod/container
+# has the right permissions to access the volumes added.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    io.kubernetes.cri-o.TTY/pihole: "false"
+    io.podman.annotations.autoremove/pihole: "FALSE"
+    io.podman.annotations.init/pihole: "FALSE"
+    io.podman.annotations.privileged/pihole: "FALSE"
+    io.podman.annotations.publish-all/pihole: "FALSE"
+  creationTimestamp: "2023-02-03T20:18:54Z"
+  labels:
+    app: pihole
+  name: pihole
+spec:
+  automountServiceAccountToken: false
+  containers:
+  - env:
+    - name: PROXY_LOCATION
+      value: pi.hole
+    - name: VIRTUAL_HOST
+      value: pi.hole
+    - name: ServerIP
+      value: 10.50.0.2
+    - name: TZ
+      value: America/New_York
+    - name: HOSTNAME
+      value: pi.hole
+    image: docker.io/pihole/pihole:latest
+    name: pihole
+    ports:
+    - containerPort: 53
+      hostPort: 53
+      protocol: TCP
+    - containerPort: 53
+      hostPort: 53
+      protocol: UDP
+    - containerPort: 80
+      hostPort: 8089
+    securityContext:
+      capabilities:
+        drop:
+        - CAP_MKNOD
+        - CAP_NET_RAW
+        - CAP_AUDIT_WRITE
+    volumeMounts:
+    - mountPath: /var/log/
+      name: pihole-log-pvc
+    - mountPath: /etc/pihole/
+      name: etc-pihole-pvc
+  dnsConfig:
+    nameservers:
+    - 127.0.0.1
+    - 1.1.1.1
+  enableServiceLinks: false
+  hostname: pi.hole
+  volumes:
+  - name: pihole-log-pvc
+    persistentVolumeClaim:
+      claimName: pihole-log
+  - name: etc-pihole-pvc
+    persistentVolumeClaim:
+      claimName: etc-pihole
+

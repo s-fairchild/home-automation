@@ -1,0 +1,62 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    bind-mount-options: /var/data/jellyfin:Z
+    io.containers.autoupdate/jellyfin: registry
+    io.kubernetes.cri-o.TTY/jellyfin: "false"
+    io.podman.annotations.autoremove/jellyfin: "TRUE"
+    io.podman.annotations.cid-file/jellyfin: /run/jellyfin.service.ctr-id
+    io.podman.annotations.init/jellyfin: "FALSE"
+    io.podman.annotations.privileged/jellyfin: "TRUE"
+    io.podman.annotations.publish-all/jellyfin: "FALSE"
+  labels:
+    app: jellyfin
+  name: jellyfin
+spec:
+  nodeName: "kore"
+  automountServiceAccountToken: false
+  containers:
+  - env:
+    - name: JELLYFIN_PublishedServerUrl
+      value: http://10.50.0.2:8096
+    image: docker.io/jellyfin/jellyfin:latest
+    name: jellyfin
+    ports:
+    - containerPort: 8096
+      hostPort: 8096
+    - containerPort: 8920
+      hostPort: 8920
+    securityContext:
+      capabilities:
+        drop:
+        - CAP_MKNOD
+        - CAP_NET_RAW
+        - CAP_AUDIT_WRITE
+    volumeMounts:
+    - mountPath: /media
+      name: media
+    - mountPath: /cache
+      name: cache
+    - mountPath: /config
+      name: jellyfin-conf-pvc
+    - mountPath: /dev/dri
+      name: dev-dri
+    securityContext:
+      privileged: true
+  enableServiceLinks: false
+  volumes:
+  - hostPath:
+      path: /var/data/jellyfin
+      type: Directory
+    name: media
+  - name: jellyfin-conf-pvc
+    persistentVolumeClaim:
+      claimName: jellyfin-conf
+  - name: cache
+    emptyDir:
+      sizeLimit: 1Gi
+  - name: dev-dri
+    hostPath:
+      path: /dev/dri

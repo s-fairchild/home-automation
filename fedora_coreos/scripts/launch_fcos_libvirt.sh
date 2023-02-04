@@ -14,7 +14,7 @@ main() {
     echo "IGNITION_FILE location: ${IGNITION_FILE:?Ignition file must be provided. See ${0} -h for usage information.}"
     IGNITION_CONFIG="/var/lib/libvirt/filesystems/$(basename ${IGNITION_FILE})"
     BACKING_STORE="${BACKING_STORE:-/dev/${POOL}/fedora-coreos-37.20230110.3.1-qemu}"
-    VM_NAME="${VM_NAME:-k3s-worker-$(( ( RANDOM % 1000 )  + 1 ))}"
+    VM_NAME="${VM_NAME:-titan}"
     VCPUS="${VCPUS:-4}"
     RAM_MB="${RAM_MB:-10240}"
     STREAM="${STREAM:-stable}"

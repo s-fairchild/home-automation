@@ -1,0 +1,70 @@
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-4.4.0
+
+# NOTE: If you generated this yaml from an unprivileged and rootless podman container on an SELinux
+# enabled system, check the podman generate kube man page for steps to follow to ensure that your pod/container
+# has the right permissions to access the volumes added.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    io.containers.autoupdate/v4l2rtspserver: registry
+    org.opencontainers.image.base.digest/v4l2rtspserver: sha256:aaa172c038576f5cd01c7a35ef2c5337d17f4f0f9fb3d4a257510e2c
+    org.opencontainers.image.base.name/v4l2rtspserver: docker.io/library/ubuntu:20.04
+  labels:
+    app: v4l2rtspserver
+  name: v4l2rtspserver
+spec:
+  nodeName: kore
+  # nodeName: k3s-worker-1
+  containers:
+  - args:
+      - -W 1280
+      - -H 720
+      - -F 30
+      - -S1
+      - -R home -U "user:${SECRET}"
+      - -C1 -A48000 -aS16_LE
+      - -u "${URL}"
+      - /dev/video0
+        # - /dev/video0,sysdefault:CARD=Camera
+    image: docker.io/mpromonet/v4l2rtspserver:latest
+    env:
+      - name: "MD5SUM"
+        valueFrom:
+          secretKeyRef:
+            name: v4l2rtspserver
+            key: md5sum
+            optional: false
+      - name: "URL"
+        valueFrom:
+          secretKeyRef:
+            name: v4l2rtspserver
+            key: url
+            optional: false
+    name: v4l2rtspserver
+    ports:
+    - containerPort: 8554
+      hostPort: 8554
+      protocol: TCP
+    volumeMounts:
+    - mountPath: /dev/video0
+      name: dev-video0
+    - mountPath: /dev/snd
+      name: dev-snd
+    securityContext:
+      privileged: true
+  volumes:
+  - hostPath:
+    # path: /dev/v4l/by-id/usb-HD_Camera_Manufacturer_HD_USB_Camera_2020101401-video-index0
+    # path: /dev/video0
+      path: /dev/v4l/by-id/usb-HD_USB_Camera_HD_USB_Camera_2020040501-video-index0
+    # path: /dev/v4l/by-id/usb-HD_USB_Camera_HD_USB_Camera_2020040501-video-index1
+    name: dev-video0
+  - hostPath:
+      path: /dev/snd
+    name: dev-snd
+

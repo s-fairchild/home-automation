@@ -1,0 +1,198 @@
+variant: fcos
+version: 1.4.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFwjm/GjkqaLR3SA93Cif7U0X4GRbpsb3ussYZwTSHAZ steven@kore
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
+storage:
+  disks:
+  - device: /dev/disk/by-id/coreos-boot-disk
+    wipe_table: false
+    partitions:
+    - number: 4
+      label: root
+      size_mib: 8192
+      resize: true
+    - size_mib: 0
+      label: var
+  directories:
+    - path: /etc/containers/containers.conf.d
+    - path: /usr/local/etc/k3d
+    - path: /root/.kube
+    - path: /usr/local/etc/k3d/manifests
+  trees:
+    - path: /usr/local/etc/k3d/manifests
+      local: k3d/manifests
+  # links:
+  #   - path: /var/run/docker.sock
+  #     target: /run/podman/podman.sock
+  #     overwrite: true
+  files:
+    - path: /usr/local/bin/k3d-installer.sh
+      mode: 0755
+      contents:
+        source: https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh
+    
+    - path: /usr/local/bin/k3d-create-cluster.sh
+      mode: 0755
+      contents:
+        inline: |
+          #!/bin/bash -x
+          #
+          # Run post k3d install
+
+          main() {
+              # k3d installer script calls exit when it's completed
+              # Run in a subshell to keep script shell from exiting
+              if [[ ! -f /usr/local/bin/k3d ]]; then
+                  bash -c "/usr/local/bin/k3d-installer.sh || echo "failed to install k3d! Exiting" && exit 1"
+              fi
+
+              # A new bridge network must be created because the default podman network doesn't
+              # provided dns
+              if ! podman network exists k3d; then
+                  podman network create k3d
+              fi
+
+              # Using FCOS Butane links doesn't work for some reason
+              setup_podman_socket
+
+              # k3d looks for docker's default network named "bridge"
+              # We must create the registry using our new network with dns
+              # to host our registry
+              if ! podman container exists k3d-registry; then
+                  k3d registry create --default-network k3d -p 5000 --verbose
+              fi
+
+              # Use registry currently doesn't work as a yaml config option
+              if ! k3d cluster list | grep titan &> /dev/null; then
+                  k3d cluster create --registry-use k3d-registry -c /usr/local/etc/k3d/k3d-cluster.yaml --verbose
+              fi
+          
+              create_bashcompletion
+              create_kubeconfig
+          }
+
+          # setup_podman_socket setups podman to cover docker's socket connection for k3d
+          # Note: this WILL NOT WORK Environment=DOCKER_HOST=unix:/run/podman/podman.sock
+          # k3d tries and fails to connect to that endpoint, but /var/run/docker.sock works
+          setup_podman_socket() {
+              systemctl disable --now docker docker.socket 
+              systemctl mask docker docker.socket
+              
+              rm -f /var/run/docker.sock
+              systemctl enable --now podman.socket
+              systemctl restart podman.socket
+              ln -s /run/podman/podman.sock /var/run/docker.sock
+          }
+
+          create_bashcompletion() {
+              local bash_k3d=/etc/bash_completion.d/k3d
+              if [ ! -f $bash_k3d ]; then
+                  k3d completion bash > "${bash_k3d}"
+              fi
+          }
+
+          create_kubeconfig() {
+              kubeconfig="$HOME/.kube"
+              if [[ ! -d "$kubeconfig" ]]; then
+                  mkdir "$kubeconfig"
+              fi
+              k3d kubeconfig get titan > "$kubeconfig"
+
+              echo "kubeconfig located at ${kubeconfig}"
+          }
+
+          main "$@"
+          
+    - path: /usr/local/etc/k3d/k3d-cluster.yaml
+      mode: 0600
+      contents:
+        local:
+          k3d/k3d-cluster.yaml
+
+    - path: /etc/hostname
+      mode: 0644
+      contents:
+        inline: |
+          titan.kore.home.arpa.
+
+    - path: /etc/containers/containers.conf.d/timeout.conf
+      contents:
+        inline: |
+          # Disable podman service timeout
+          service_timeout = 0
+
+    - path: /etc/systemd/zram-generator.conf
+      mode: 0644
+      contents:
+        inline: |
+          # This config file enables a /dev/zram0 device with the default settings
+          [zram0]
+
+systemd:
+  units:
+    - name: podman.socket
+      enabled: true
+    
+    - name: docker.service
+      enabled: false
+      mask: true
+    
+    - name: docker.socket
+      enabled: true
+      mask: true
+
+    - name: nm-cloud-setup.service
+      enabled: false
+      mask: true
+    
+    - name: nm-cloud-setup.socket
+      enabled: false
+      mask: true
+
+    - name: rpm-ostree-install-k3s-selinux.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Install rancher k3s selinux package with rpm-ostree
+        After=network-online.target
+        Wants=network-online.target
+        ConditionPathExists=!/var/lib/%N.stamp
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        Restart=on-failure
+        RestartSec=60
+        ExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \
+            vim \
+            podman-docker \
+            kubernetes-client
+
+        ExecStart=/bin/touch /var/lib/%N.stamp
+
+        [Install]
+        WantedBy=multi-user.target
+  
+    - name: k3d-install-cluster.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=k3s bootstrapper
+        After=network-online.target
+        Wants=network-online.target
+        After=rpm-ostree-install-k3s-selinux.service
+        ConditionPathExists=!/var/lib/%N.stamp
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        Restart=on-failure
+        ExecStart=/bin/touch /var/lib/%N.stamp
+        ExecStart=/usr/local/bin/k3d-create-cluster.sh
+
+        [Install]
+        WantedBy=multi-user.target

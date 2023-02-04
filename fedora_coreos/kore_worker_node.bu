@@ -17,6 +17,8 @@ storage:
       resize: true
     - size_mib: 0
       label: containers
+  directories:
+    - /etc/containers/containers.conf.d
   files:
     - path: /etc/hostname
       mode: 0644
@@ -28,6 +30,12 @@ storage:
       contents:
         source: https://get.k3s.io 
       mode: 0744
+    
+    - path: /etc/containers/containers.conf.d/timeout.conf
+      contents:
+        inline: |
+          # Disable podman service timeout
+          service_timeout=0
 
     - path: /etc/rancher/k3s/config.yaml
       contents:
