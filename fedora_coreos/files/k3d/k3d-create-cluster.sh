@@ -20,7 +20,7 @@ main() {
     fi
 
     # Using FCOS Butane links doesn't work for some reason
-    # setup_podman_socket
+    setup_podman_socket
 
     # k3d looks for docker's default network named "bridge"
     # We must create the registry using our new network with dns
@@ -31,7 +31,7 @@ main() {
 
     # Use registry currently doesn't work as a yaml config option
     if ! k3d cluster list | grep titan &> /dev/null; then
-        if k3d cluster create --verbose --registry-use "$K3D_REGISTRY" -c "${K3D_CLUSTER_YAML}"; then
+        if k3d cluster create --verbose --registry-use "$K3D_REGISTRY" -c "${K3D_CLUSTER_YAML}" titan; then
             label_nodes
             create_kubeconfig
             create_bashcompletion
@@ -49,17 +49,21 @@ setup_podman_socket() {
     systemctl disable --now docker docker.socket 
     systemctl mask docker docker.socket
               
-    rm -f /var/run/docker.sock
+    local docker_sock="/var/run/docker.sock"
+    local podman_sock="/run/podman/podman.sock"
+    if [[ -f $docker_sock ]]; then
+        rm -f /$docker_sock
+    fi
     systemctl enable --now podman.socket
     systemctl restart podman.socket
-    ln -s /run/podman/podman.sock /var/run/docker.sock
+    ln -s "${podman_sock}" "$docker_sock"
 }
 
 # shellcheck disable=SC2120
 label_nodes() {
-    node_prefix="${1:-k3d-$cluster-agent}"
-    for i in ${1..3}; do
-        kubectl label "node/${node_prefix}-${i}" node-role.kubernetes.io/worker=true 
+    node_prefix="${1:-k3d-$CLUSTER-agent}"
+    for i in {0..2}; do
+	    podman exec -it "k3d-${CLUSTER}-server-0" kubectl label "node/${node_prefix}-${i}" node-role.kubernetes.io/worker=true
     done
 }
 

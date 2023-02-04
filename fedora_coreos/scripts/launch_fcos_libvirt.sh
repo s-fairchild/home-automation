@@ -4,8 +4,8 @@ set -o nounset -o errexit
 
 # TODO add getopts to use flags
 main() {
-    # POOL="${POOL:-vg0}"
     POOL="${POOL:-fedora_kore}"
+    DATA_POOL="${DATA_POOL:-vg0}"
     IMG_PATH="${IMG_PATH:-/var/lib/libvirt/${POOL}/images}"
     if [[ ${DOWNLOAD_IMAGE:-false} == "true" ]]; then
         download_update_image "$IMG_PATH"
@@ -26,6 +26,8 @@ main() {
         # --disk="vol=${POOL}/node1,size=${DISK_GB},backing_store=${BACKING_STORE},sparse=yes" \
     virt-install --connect="qemu:///system" --name="${VM_NAME}" --vcpus="${VCPUS}" --memory="${RAM_MB}" \
         --disk="pool=${POOL},size=${DISK_GB},backing_store=${BACKING_STORE},sparse=yes" \
+        --disk="vol=${DATA_POOL}/jellyfin" \
+        --disk="vol=${DATA_POOL}/k3s_data" \
         --os-variant="fedora-coreos-$STREAM" \
         --import \
         --graphics=spice \
@@ -100,7 +102,7 @@ EXAMPLES:
     exit "${1:-0}"
 }
 
-while getopts ":f:d:b:p:" o; do
+while getopts ":f:d:b:p:r" o; do
     case "${o}" in
         f)
             IGNITION_FILE="${OPTARG}"
@@ -115,6 +117,9 @@ while getopts ":f:d:b:p:" o; do
             ;;
         p)
             POOL="${OPTARG}"
+            ;;
+        r)
+            DRYRUN="true"
             ;;
         :)
             case "${OPTARG}" in

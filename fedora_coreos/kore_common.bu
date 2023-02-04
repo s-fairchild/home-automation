@@ -565,22 +565,16 @@ systemd:
 
 storage:
   disks:
-  - device: /dev/disk/by-id/coreos-boot-disk
+  - device: /dev/vdb
     wipe_table: false
     partitions:
-    - number: 4
-      label: root
-      size_mib: 8192
-      resize: true
-    - size_mib: 0
-      label: containers
-
+      - size_mib: 0
+      - start_mib: 0
+      - label: var
   filesystems:
-    - path: /var/lib/containers
-      device: /dev/disk/by-partlabel/containers
+    - path: /var
+      device: /dev/disk/by-partlabel/var
       format: btrfs
-      uuid: 938a230d-a552-4baa-8f99-b4f59bbd236c
-      wipe_filesystem: false
       with_mount_unit: true
 
   links:

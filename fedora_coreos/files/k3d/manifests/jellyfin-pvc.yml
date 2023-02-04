@@ -11,12 +11,10 @@ metadata:
   name: jellyfin-conf
 spec:
   accessModes:
-    # - ReadWriteOnce
-  - ReadWriteOncePod
+    - ReadWriteOnce
+    # - ReadWriteOncePod
   volumeMode: Filesystem
-  persistentVolumeReclaimPolicy: Retain
   resources:
     requests:
       storage: 1Gi
 status: {}
-

@@ -3,8 +3,8 @@ apiVersion: k3d.io/v1alpha4
 kind: Simple
 # metadata:
   # name: titan
-servers: 3
-agents: 3
+servers: 1
+agents: 1
 network: k3d
 token: "Schematic-Clad-Browbeat8-Unkind-Treat-Sponge-Treachery-Primate"
 kubeAPI:
@@ -12,22 +12,28 @@ kubeAPI:
   hostIP: "0.0.0.0" # where the Kubernetes API will be listening on
   hostPort: "6443" # where the Kubernetes API listening port will be mapped to on your host system
 volumes:
-  - volume: /var/data:/var/data
+  - volume: /var/data/jellyfin
     nodeFilters:
       - agent:*
+  - volume: /var/data/motionplus
+    nodeFilters:
+      - agent:*
+  - volume: /usr/local/etc/k3d/manifests
+    nodeFilters:
+      - server:0
 ports:
   - port: 8080:80 # same as `--port '8080:80@loadbalancer'`
     nodeFilters:
       - loadbalancer
-# options:
+options:
+  k3d: # k3d runtime settings
+    wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)
+    timeout: "300s" # wait timeout before aborting; same as `--timeout 60s`
+  kubeconfig:
+    updateDefaultKubeconfig: true # add new cluster to your default Kubeconfig; same as `--kubeconfig-update-default` (default: true)
+    switchCurrentContext: true # also set current-context to the new cluster's context; same as `--kubeconfig-switch-context` (default: true)
 #   k3s:
 #     nodeLabels:
 #       - label: node-role.kubernetes.io/worker=true
 #         nodeFilters:
 #           - agent:*
-  k3d: # k3d runtime settings
-    wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)
-    timeout: "60s" # wait timeout before aborting; same as `--timeout 60s`
-  kubeconfig:
-    updateDefaultKubeconfig: true # add new cluster to your default Kubeconfig; same as `--kubeconfig-update-default` (default: true)
-    switchCurrentContext: true # also set current-context to the new cluster's context; same as `--kubeconfig-switch-context` (default: true)

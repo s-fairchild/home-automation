@@ -8,15 +8,18 @@ passwd:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBJ0MSYF8SY9eZoGKe1rhPvrm58FiMxQMJf69WEeBUTn steve51516@gmail.com
 storage:
   disks:
-  - device: /dev/disk/by-id/coreos-boot-disk
-    wipe_table: false
+  - device: /dev/vdb
+    wipe_table: true
     partitions:
-    - number: 4
-      label: root
-      size_mib: 8192
-      resize: true
-    - size_mib: 0
-      label: var
+      - label: containers
+        number: 1
+        size_mib: 0
+  filesystems:
+    - path: /var
+      device: /dev/disk/by-partlabel/containers
+      format: btrfs
+      with_mount_unit: true
+      wipe_filesystem: true
   directories:
     - path: /etc/containers/containers.conf.d
     - path: /usr/local/etc/k3d
@@ -24,54 +27,88 @@ storage:
     - path: /usr/local/etc/k3d/manifests
     - path: /root/.bashrc.d
     - path: /home/core/.bashrc.d
+    - path: /var/data
   trees:
     - path: /usr/local/etc/k3d/manifests
       local: k3d/manifests
-  links:
-    - path: /var/run/docker.sock
-      target: /run/podman/podman.sock
-      overwrite: true
   files:
     - path: /root/.bashrc.d/docker_sock
       contents:
         inline: |
           EDITOR=/usr/bin/vim
           DOCKER_SOCK=/run/podman/podman.sock
+      overwrite: false
+
+    - path: /home/core/.bashrc.d/kubectl
+      contents:
+        inline: |
+          kubectl() {
+              podman exec -it "k3d-${CLUSTER}-server-0" kubectl "${@}"
+          }
+      overwrite: false
+    
+    - path: /home/core/.bashrc.d/cluster
+      contents:
+        inline: |
+          export CLUSTER=titan
+      overwrite: false
+
+    - path: /root/.bashrc.d/kubectl
+      contents:
+        inline: |
+          kubectl() {
+              podman exec -it "k3d-${CLUSTER}-server-0" kubectl "${@}"
+          }
+      overwrite: false
+    
+    - path: /root/.bashrc.d/cluster
+      contents:
+        inline: |
+          export CLUSTER=titan
+      overwrite: false
 
     - path: /home/core/.bashrc.d/docker_sock
       contents:
         inline: |
           EDITOR=/usr/bin/vim
           DOCKER_SOCK=/run/podman/podman.sock
+      overwrite: false
 
     - path: /usr/local/bin/k3d-installer.sh
       mode: 0755
       contents:
         source: https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh
+      overwrite: true
     
     - path: /usr/local/bin/k3d-create-cluster.sh
       mode: 0755
       contents:
         local:
           k3d/k3d-create-cluster.sh
+      overwrite: true
           
     - path: /usr/local/etc/k3d/k3d-cluster.yaml
       mode: 0600
       contents:
         local:
           k3d/k3d-cluster.yaml
+      overwrite: true
 
     - path: /etc/hostname
       mode: 0644
       contents:
         inline: |
           titan.kore.home.arpa.
+      overwrite: false
+
 
     - path: /etc/containers/containers.conf.d/timeout.conf
       contents:
         inline: |
           # Disable podman service timeout
-          service_timeout = 0
+          service_timeout=0
+      overwrite: false
+
 
     - path: /etc/systemd/zram-generator.conf
       mode: 0644
@@ -79,6 +116,7 @@ storage:
         inline: |
           # This config file enables a /dev/zram0 device with the default settings
           [zram0]
+      overwrite: false
 
 systemd:
   units:
@@ -139,6 +177,7 @@ systemd:
         RemainAfterExit=yes
         Restart=on-failure
         Environment=DOCKER_SOCK=/run/podman/podman.sock
+        ExecStartPre=/usr/bin/ln -s /run/podman/podman.sock /var/run/docker.sock
         ExecStart=/bin/touch /var/lib/%N.stamp
         ExecStart=/usr/local/bin/k3d-create-cluster.sh
 

@@ -2,20 +2,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  annotations:
-    bind-mount-options: /var/data/jellyfin:Z
-    io.containers.autoupdate/jellyfin: registry
-    io.kubernetes.cri-o.TTY/jellyfin: "false"
-    io.podman.annotations.autoremove/jellyfin: "TRUE"
-    io.podman.annotations.cid-file/jellyfin: /run/jellyfin.service.ctr-id
-    io.podman.annotations.init/jellyfin: "FALSE"
-    io.podman.annotations.privileged/jellyfin: "TRUE"
-    io.podman.annotations.publish-all/jellyfin: "FALSE"
   labels:
     app: jellyfin
   name: jellyfin
 spec:
-  nodeName: "kore"
   automountServiceAccountToken: false
   containers:
   - env:
