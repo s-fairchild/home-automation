@@ -26,6 +26,12 @@
       },
       {
         "path": "/usr/local/etc/k3d/manifests"
+      },
+      {
+        "path": "/root/.bashrc.d"
+      },
+      {
+        "path": "/home/core/.bashrc.d"
       }
     ],
     "disks": [
@@ -48,6 +54,20 @@
     ],
     "files": [
       {
+        "path": "/root/.bashrc.d/docker_sock",
+        "contents": {
+          "compression": "",
+          "source": "data:,EDITOR%3D%2Fusr%2Fbin%2Fvim%0ADOCKER_SOCK%3D%2Frun%2Fpodman%2Fpodman.sock%0A"
+        }
+      },
+      {
+        "path": "/home/core/.bashrc.d/docker_sock",
+        "contents": {
+          "compression": "",
+          "source": "data:,EDITOR%3D%2Fusr%2Fbin%2Fvim%0ADOCKER_SOCK%3D%2Frun%2Fpodman%2Fpodman.sock%0A"
+        }
+      },
+      {
         "path": "/usr/local/bin/k3d-installer.sh",
         "contents": {
           "source": "https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh"
@@ -58,7 +78,7 @@
         "path": "/usr/local/bin/k3d-create-cluster.sh",
         "contents": {
           "compression": "gzip",
-          "source": "data:;base64,H4sIAAAAAAAC/3RVXW8bNxB8v18xPgl2C/QsF0FfUthom7pIkTQCnBR+CAyDOq4kQjzywN2TbNj+7wV5HzrLqh8siZzdnRkuuZOT2cK42ULxGsVDNskmuGkcas+CzTsN41iUtVlWKeN++BFPGQBMxnsUwGUwtaBU1jLowQh2a3IwcsYofVVbEtJdZExvHBS4WfCarIV4bIjqPku7uAy+SqmMW6VIs8T37zhBscSs4TCzvlQ2kY9c7u5+hazJJWj8axWVyN+Ci4H4Oa/x/Awq1x75UhlLOrLp9qPIE1y3HHKcnrbSfs5TkaXJOkW/w9EOi2D0iuBIdj5sUDUsWBDKQEpIY0GlapgiSWhaqsYKaq8r5YYQ7YndmXRZ6+C3RpOGdtwbcHIYQg+GhSPRA/kHuJZFxB1w/5eNW+GvD/Ov+KMR5QjWuA33XJCilz6AfUUIpNi3RZikqe/bMvfsyw1JNuoN6/2GU6COe+GMB9U9J6cq0shb3/Iu9pZa5zrC0a1AK8MSHtEkrr4Jye8+zc7IevBoEo9vHZs3wvrIN/aV3okyjsLIwKJHHzgZ1QwUOlpF0YkpehYRVdT45eLiAkWxpbDwTG+8HokpmxDIiX18bbViKDyqykaOS7OCr8V0licFsVBpGxYKsIYFz1gFqiFGlMPpFWaatjPXWHtERx84yOjpFLE1xybEqzO6OSRlvDnp9nRJzhPL41rb/PfxDnbXv9fQ7WyaBbUCs5csmxzrpnaN+yMTj9JvadRPHaz0zlEZC6R2iy0+wRcv9B6yNozbvz9/xpf5N9zObz7h2m1N8K4iJ5d/zj98ur65/zj/+u2ycebh/Sw0btbW6z7OY5GsbWkJhhjKacSXgltGqXb8KmslIKdrb5z8hEUjmG1VSClbyilXOmXOjugdHld+ZKGqFAttWC1sPCfnd51wjJKR4CCiUrw5Cky49C9U6Qk9wu0gF7lR8ZEdXbI9MBCLCnIEYx0Kxv/YepzDS5Yd7Z7BntSQ6Xm/37zTl6k106899jw16jA12qEx7UNwd+xmDMHt5LhCPn3qI16GF3/Pbt/BA7P90mU+/Tj/53p2Hpfy1+NLI5/ukfnbyVVttAmvQX35nu1+CyuS7u5fHcQkdDvaRvhoX5xHSjB92q+/5FFbHPLIp7/l2X8BAAD///aq688YCAAA"
+          "source": "data:;base64,H4sIAAAAAAAC/3RWbW/bNhD+rl9xUYx2AyYpqbEvKdytS721aNoAToqi6AqDEs82IYoUSMpJ4Pq/D0dRsqx4BhJJ5L089/BeeH6W5UJlObMbSB6j8+gcFo2CWlsH5ZSDUNYxKaOoYkL98ivsIgCA65svd/fzxSye7MLrVeKEY2of+/2P03fLxfyfD3f3i28kNPy+SsopTwyuhXXmaaDweX7/9XbxsZMPn158IBX8Lb+9/XTTiQ7XrpKssSaTumAyQ1dk5ZTTX1LIxjo06ROrZLDn/7UBCwUMbJPbDUoJTkOJWIMtjKgdtIsroyvAR+GEWntNsYLv3+EMkhUMfBKdxNyPH6/BbVB5Ufq1HBcQPxdOAs1oUruBnz8Bi42GeMWERE5owj4dyRnMWwwxvHjh8cBlG85KRCGit6DwAXIj+BpBoXvQpoSqsQ5yhMIgc8ghx4I1FgkkcFyxRjqoNa+Y6lW4RqteumC1NnorOHLgynYEnI1V8FFYZyGeDM4wHjExUmkBjVRGEX2xQq3h7+vbO/ircUwhSKFK2yEEb2ilDVhdIRhkVqugatE19bL1ubS6KNF1VumcpNal9aqc9sxL27PRAVSsQg5xy2ccdL9iy2hATyx2SQ2NR6sb48+hM/Mg3Kbn7pyOdUNlRmKd5jNaC60cEwrNMbFdMY2ZpYB6FAFZkmzR5NrSW4gs6SCRfFLD7xcXF88IH8RTNMagcvLpmG9mgQHVE8FciTXo2onAuw+CzIe6Aymsg5+wNliD7xXw4g1kHLeZaqQcxSFWR7onIumwJZTCI1J8lT1vDfsxW/STLEe5VJqjPVpvXS7LJsc2uFO7VNKFrmqJfdyBRXqgtNiv+YpOEOK3uTZUvmmaQt8+97DSjeLpv+qDJYwGgSlNL0OZ2qBF5f7oi+MAKNpH0clUb9dsl09OQ6G3OEj2IFZopbCgMHwtlFMencNn7fAK3EZY+Prh5gY+394DVSfM1VYYrSpUbvbu9vrjfLF8f3t3P2uUeLzKTKOy1l94pOQkauvNGYEWmOJA7c22iLxvenUb5gAVr7VQ7jfIGwfZlhlvsoXsbfn8s9GJePsZZZ+sw6pwEriwLJeUNEo/hMBhYAwdjDQqZsuTgkdJEAaIqfwEOIFyZBXVAMaAmGD2IGjQOmbcCRmpILHwPwSfxtAmBk2wYoNF2bExu7t+dfnqIhrkf08dfS1rgyvxSCP2sh3Zk1CNCVujcmGEUq4Imp6T3WWaTvevgetDN6LicbKtMYjJbDbZDazvk8lO7GPvMDFaYkoqRqFDmwqd0SmjmTnTYMs11wopopP11+P3s9XP22U55TN/DfBfB9nUXwr6Md5O8UmnAj9O9NWDcjvK31CP6TT2fU0e0B16R4/ssDSLJ+9vP80zH3F8fJ/gEE8OkvHzq0RVcmGOhYYtgdAetmCNLnTcNyOdqO9M8UCe6KMLAnMw2R3W9zHFRvdAiCd/xv8FAAD//zE5N506CgAA"
         },
         "mode": 493
       },
@@ -66,7 +86,7 @@
         "path": "/usr/local/etc/k3d/k3d-cluster.yaml",
         "contents": {
           "compression": "gzip",
-          "source": "data:;base64,H4sIAAAAAAAC/3yST2/bMAzF7/4URHLodlCWLUURaJd1HQYUvQTotnNom4kFy6JB0fXy7QfJzpL9hQ+GRfL33qNsjCmwd99IouNgod3UK8dvXt6i7xu8LVoXagvPrus9FR0p1qhoC4CAHVlQpxiKSPJCEi28K/BIQaOFTRFIR5Y2IwvlloKFxXPVUIfqKvPgsTYfhceSULfma0hK5osQqnnuORwpf1QNycnsxHWotCjaoaT73WMysISGo1pYZA+rloVWDXe0QulxAUtwXc+iGBQOLKANwX4yuodIqi4cwYV8nqgVh4M7FpCpjzsLi/UqPwk1NiSUW5+GkiSQUoT73SOMznsoCbyLSiEhOcyMHUtyd3d7u/kv4jKa7P4kdtj3VIMycIATD5KhEE9RqStSa0xbMHnKwna9XdvtGpYQsSPACHtjMvBmLn3wjHWJHkNFcrMvAAAC1/TZeU2Xlw8S8Lqv4F4dh1xtN7WFZXqBDEFdR+c9xjw7olMLKgOluOimvVd+iEqSgpQEQ8TSE5R0YCEQ0kFcyv7+2naa3cOrmg44+Bn5OkskUR7yWtdxcZaZT89ULFn0d+a5524dU/TLjU+5h75GpU+T4tOleI6DdQ2Bxus0+U5mj3AZ+UX1ImMmBTMP/D1eHJ1WzcMgQkEfOCh9v2wUfeS0cKimuqmmhuQl/VZX9m4izMV/uZmUzog/3fwIAAD//5s8YMgXBAAA"
+          "source": "data:;base64,H4sIAAAAAAAC/3xTX2/TMBB/z6c4NQ8DJHdFnabKCIkxhDSNh0oDnntJro0Vx47Ol4Z9e2QnbcpgqA+17/z7c3+ilMqwMz+Jg/FOQ7OulsZfH9+j7Wq8yRrjKg1Ppu0sZTm0JFihoM4AcnDYkgYxgi4LxEfioGGd4YGcpJMjGTw3iTYT35DTsHgqa2pRTKnuLVbqM/uhIJSN+uGimvrOhKKeOu8OlC5lTfystmxaFFpkTV/Q3fYhWqh9EA2L5GDZeKZl7VtaIne4gBxM23kWdAJ7zyA1wW60uYNAIsYdwLgUj5yld3tzmFgfthoWq2X6RaqhJqb09LEviB0JBbjbPsBgrIWCwJog5CKldxPH1nN0d3tzs/4vxQyNds+MLXYdVSAevINn33MihfAchNrs6G3fUohdUDBeNFwfka/TfM6nDADA+Yq+GitxQCkQQWlM+l0WRSeeLjnerDYrvVlBDgFbAgywUypZu5pSn6zHqkCLriS+2r2ucfkuy8F3YrwLOssBoFlPhxH7DQuy50gCx4hOScXe0rI59y3uaNws4o/CPZ1BL2zM4cuCo3SlIY9/wL0T09JpIUKyPqARDZE5zg3NuECl7YMQx4kUBH3AwhIUtPdMwCQ9mzjED5ddi9gdvKloj72dKN8miSjq+7Qfq7A4yUzREysWnuUl5+nN7SrEzs+rO7a97yoU+jIqPs7JUzlYVeBouKwmLdfkEWbIH6qzjBoV1AT4d3lhMFLW9z0zObn3TujX3FG0wceGQznmVTk+iF7i93Fh7yrAlHzNzah0ovjbze8AAAD//9x/h2niBAAA"
         },
         "mode": 384
       },
@@ -173,6 +193,13 @@
         },
         "mode": 420
       }
+    ],
+    "links": [
+      {
+        "overwrite": true,
+        "path": "/var/run/docker.sock",
+        "target": "/run/podman/podman.sock"
+      }
     ]
   },
   "systemd": {
@@ -202,12 +229,12 @@
         "name": "nm-cloud-setup.socket"
       },
       {
-        "contents": "[Unit]\nDescription=Install rancher k3s selinux package with rpm-ostree\nAfter=network-online.target\nWants=network-online.target\nConditionPathExists=!/var/lib/%N.stamp\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nRestart=on-failure\nRestartSec=60\nExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \\\n    vim \\\n    podman-docker \\\n    kubernetes-client\n\nExecStart=/bin/touch /var/lib/%N.stamp\n\n[Install]\nWantedBy=multi-user.target\n",
+        "contents": "[Unit]\nDescription=Install Admin Packages\nAfter=network-online.target\nWants=network-online.target\nConditionPathExists=!/var/lib/%N.stamp\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nRestart=on-failure\nRestartSec=60\nExecStart=/usr/bin/rpm-ostree install -y --apply-live --allow-inactive \\\n    vim \\\n    kubernetes-client\n\nExecStart=/bin/touch /var/lib/%N.stamp\n\n[Install]\nWantedBy=multi-user.target\n",
         "enabled": true,
-        "name": "rpm-ostree-install-k3s-selinux.service"
+        "name": "rpm-ostree-install-pkgs.service"
       },
       {
-        "contents": "[Unit]\nDescription=k3s bootstrapper\nAfter=network-online.target\nWants=network-online.target\nAfter=rpm-ostree-install-k3s-selinux.service\nConditionPathExists=!/var/lib/%N.stamp\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nRestart=on-failure\nExecStart=/bin/touch /var/lib/%N.stamp\nExecStart=/usr/local/bin/k3d-create-cluster.sh\n\n[Install]\nWantedBy=multi-user.target\n",
+        "contents": "[Unit]\nDescription=k3s bootstrapper\nAfter=network-online.target\nWants=network-online.target\nAfter=rpm-ostree-install-k3s-selinux.service\nConditionPathExists=!/var/lib/%N.stamp\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nRestart=on-failure\nEnvironment=DOCKER_SOCK=/run/podman/podman.sock\nExecStart=/bin/touch /var/lib/%N.stamp\nExecStart=/usr/local/bin/k3d-create-cluster.sh\n\n[Install]\nWantedBy=multi-user.target\n",
         "enabled": true,
         "name": "k3d-install-cluster.service"
       }
