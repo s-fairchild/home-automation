@@ -31,7 +31,7 @@ main() {
 
     # Use registry currently doesn't work as a yaml config option
     if ! k3d cluster list | grep titan &> /dev/null; then
-        if k3d cluster create --verbose --registry-use "$K3D_REGISTRY" -c "${K3D_CLUSTER_YAML}" titan; then
+        if k3d cluster create --verbose --registry-use "$K3D_REGISTRY" -c "${K3D_CLUSTER_YAML}" "${CLUSTER}"; then
             label_nodes
             create_kubeconfig
             create_bashcompletion
@@ -79,6 +79,7 @@ create_kubeconfig() {
     if [[ ! -d "$kubeconfig" ]]; then
         mkdir "$kubeconfig"
     fi
+    kubeconfig+="/config"
     k3d kubeconfig get titan > "$kubeconfig"
 
     echo "kubeconfig located at ${kubeconfig}"

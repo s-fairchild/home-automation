@@ -39,15 +39,15 @@ spec:
   containers:
   - env:
     - name: PROXY_LOCATION
-      value: pihole
+      value: pi.hole
     - name: VIRTUAL_HOST
-      value: pihole
+      value: pi.hole
     - name: ServerIP
       value: 10.50.0.2
     - name: TZ
       value: America/New_York
     - name: HOSTNAME
-      value: pihole
+      value: pi.hole
     image: docker.io/pihole/pihole:latest
     name: pihole
     ports:
@@ -75,7 +75,7 @@ spec:
     - 127.0.0.1
     - 1.1.1.1
   enableServiceLinks: false
-  hostname: pi.hole
+  hostname: pihole
   volumes:
   - name: pihole-log-pvc
     persistentVolumeClaim:

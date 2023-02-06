@@ -33,7 +33,6 @@ main() {
         --graphics=spice \
         --network "network=${NETWORK}" \
         --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGNITION_CONFIG}" \
-        --check disk_size=off \
         --autostart \
         --noautoconsole
 

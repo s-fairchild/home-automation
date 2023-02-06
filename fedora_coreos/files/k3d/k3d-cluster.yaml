@@ -1,26 +1,27 @@
 ---
 apiVersion: k3d.io/v1alpha4
 kind: Simple
-# metadata:
-  # name: titan
+metadata:
+  name: titan
 servers: 1
 agents: 1
 network: k3d
 token: "Schematic-Clad-Browbeat8-Unkind-Treat-Sponge-Treachery-Primate"
 kubeAPI:
-  host: "titan.kore.home.arpa" # important for the `server` setting in the kubeconfig
+  # host: "titan.kore.home.arpa" # important for the `server` setting in the kubeconfig
+  host: "titan" # important for the `server` setting in the kubeconfig
   hostIP: "0.0.0.0" # where the Kubernetes API will be listening on
   hostPort: "6443" # where the Kubernetes API listening port will be mapped to on your host system
 volumes:
-  - volume: /var/data/jellyfin
+  - volume: /var/data/jellyfin:/var/data/jellyfin
     nodeFilters:
       - agent:*
-  - volume: /var/data/motionplus
+  - volume: /var/data/motionplus:/var/data/motionplus
     nodeFilters:
       - agent:*
-  - volume: /usr/local/etc/k3d/manifests
+  - volume: /usr/local/etc/k3d/manifests:/var/lib/rancher/k3s/server/manifests # auto deploy manifests
     nodeFilters:
-      - server:0
+      - server:*
 ports:
   - port: 8080:80 # same as `--port '8080:80@loadbalancer'`
     nodeFilters:
@@ -32,8 +33,8 @@ options:
   kubeconfig:
     updateDefaultKubeconfig: true # add new cluster to your default Kubeconfig; same as `--kubeconfig-update-default` (default: true)
     switchCurrentContext: true # also set current-context to the new cluster's context; same as `--kubeconfig-switch-context` (default: true)
-#   k3s:
-#     nodeLabels:
-#       - label: node-role.kubernetes.io/worker=true
-#         nodeFilters:
-#           - agent:*
+  k3s:
+    nodeLabels:
+      - label: app.kubernetes.io/jellyfin
+        nodeFilters:
+          - agent:*

@@ -1,52 +1,114 @@
+
 ---
 apiVersion: v1
-kind: Pod
+kind: PersistentVolume
+metadata:
+  name: jellyfin-media
+spec:
+  capacity:
+    storage: 3Ti
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /var/data/jellyfin
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node-role.kubernetes.io/worker
+              operator: In
+              values:
+                - "true"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-conf-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 3Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-media-pvc
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 3Ti
+---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   labels:
     app: jellyfin
   name: jellyfin
 spec:
-  automountServiceAccountToken: false
-  containers:
-  - env:
-    - name: JELLYFIN_PublishedServerUrl
-      value: http://10.50.0.2:8096
-    image: docker.io/jellyfin/jellyfin:latest
-    name: jellyfin
-    ports:
-    - containerPort: 8096
-      hostPort: 8096
-    - containerPort: 8920
-      hostPort: 8920
-    securityContext:
-      capabilities:
-        drop:
-        - CAP_MKNOD
-        - CAP_NET_RAW
-        - CAP_AUDIT_WRITE
-    volumeMounts:
-    - mountPath: /media
-      name: media
-    - mountPath: /cache
-      name: cache
-    - mountPath: /config
-      name: jellyfin-conf-pvc
-    - mountPath: /dev/dri
-      name: dev-dri
-    securityContext:
-      privileged: true
-  enableServiceLinks: false
-  volumes:
-  - hostPath:
-      path: /var/data/jellyfin
-      type: Directory
-    name: media
-  - name: jellyfin-conf-pvc
-    persistentVolumeClaim:
-      claimName: jellyfin-conf
-  - name: cache
-    emptyDir:
-      sizeLimit: 1Gi
-  - name: dev-dri
-    hostPath:
-      path: /dev/dri
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      # affinity:
+      #   nodeAffinity:
+      #     - matchExpressions:
+      #       - key: node-role.kubernetes.io/worker=true
+      #         operator: In
+      #         values:
+      #         - "true"
+      containers:
+      - env:
+        - name: JELLYFIN_PublishedServerUrl
+          value: http://10.50.0.2:8096
+        image: docker.io/jellyfin/jellyfin:latest
+        name: jellyfin
+        ports:
+        - containerPort: 8096
+          hostPort: 8096
+        - containerPort: 8920
+          hostPort: 8920
+        securityContext:
+          privileged: true
+          capabilities:
+            drop:
+            - CAP_MKNOD
+            - CAP_NET_RAW
+            - CAP_AUDIT_WRITE
+        volumeMounts:
+        - mountPath: /media
+          name: jellyfin-media
+        - mountPath: /cache
+          name: cache
+        - mountPath: /config
+          name: jellyfin-conf
+        - mountPath: /dev/dri/renderD128
+          name: dev-dri
+      enableServiceLinks: false
+      volumes:
+      - name: jellyfin-media
+        persistentVolumeClaim:
+          claimName: jellyfin-media-pvc
+      - name: jellyfin-conf
+        persistentVolumeClaim:
+          claimName: jellyfin-conf-pvc
+      - name: cache
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: dev-dri
+        hostPath:
+          path: /dev/dri/renderD128
+          type: CharDevice
